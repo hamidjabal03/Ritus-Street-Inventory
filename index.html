@@ -1,0 +1,449 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Plus, 
+  Minus, 
+  Package, 
+  Search, 
+  Trash2, 
+  ArrowUpRight, 
+  ArrowDownLeft, 
+  FileSpreadsheet,
+  BarChart3,
+  History,
+  TrendingUp,
+  TrendingDown,
+  LayoutDashboard
+} from 'lucide-react';
+
+export default function App() {
+  const [inventory, setInventory] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [activeTab, setActiveTab] = useState('inventory'); // inventory, transactions, summary
+  const [summarySubTab, setSummarySubTab] = useState('in'); // in, out, stats
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showModal, setShowModal] = useState(null);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [notification, setNotification] = useState(null);
+  
+  const fileInputRef = useRef(null);
+
+  // Memuat data dari penyimpanan lokal saat aplikasi dibuka
+  useEffect(() => {
+    const savedInventory = localStorage.getItem('ritus_inventory');
+    const savedTransactions = localStorage.getItem('ritus_transactions');
+    if (savedInventory) setInventory(JSON.parse(savedInventory));
+    if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
+  }, []);
+
+  // Menyimpan data ke penyimpanan lokal setiap ada perubahan
+  useEffect(() => {
+    localStorage.setItem('ritus_inventory', JSON.stringify(inventory));
+    localStorage.setItem('ritus_transactions', JSON.stringify(transactions));
+  }, [inventory, transactions]);
+
+  const notify = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  const detectDelimiter = (line) => {
+    const semicolonCount = (line.match(/;/g) || []).length;
+    const commaCount = (line.match(/,/g) || []).length;
+    return semicolonCount > commaCount ? ';' : ',';
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target.result;
+        const lines = text.split(/\r?\n/).filter(line => line.trim() !== "");
+        if (lines.length === 0) return;
+        const delimiter = detectDelimiter(lines[0]);
+        
+        let headerIndex = -1;
+        for (let i = 0; i < lines.length; i++) {
+          const lowerLine = lines[i].toLowerCase();
+          if (lowerLine.includes('nama artikel') && lowerLine.includes('size')) {
+            headerIndex = i;
+            break;
+          }
+        }
+
+        if (headerIndex === -1) {
+          notify('Header tidak ditemukan. Pastikan ada kolom "Nama Artikel" dan "Size".', 'error');
+          return;
+        }
+
+        const headers = lines[headerIndex].split(delimiter).map(h => h.trim().toLowerCase());
+        const colMap = {
+          tanggal: headers.indexOf('tanggal'),
+          nama: headers.indexOf('nama artikel'),
+          size: headers.indexOf('size'),
+          stokAwal: headers.indexOf('stok awal'),
+          stokMasuk: headers.indexOf('stok masuk'),
+          totalStok: headers.indexOf('total stok')
+        };
+
+        const newItems = [];
+        const newTransactions = [];
+        const importTimestamp = new Date().toISOString();
+
+        for (let i = headerIndex + 1; i < lines.length; i++) {
+          const cols = lines[i].split(delimiter);
+          if (cols.length < 2) continue;
+          
+          const nama = cols[colMap.nama]?.trim();
+          const size = cols[colMap.size]?.trim();
+          if (!nama || !size) continue;
+
+          let finalStock = 0;
+          if (colMap.totalStok !== -1 && cols[colMap.totalStok]) {
+            finalStock = parseInt(cols[colMap.totalStok]) || 0;
+          } else {
+            const sAwal = parseInt(cols[colMap.stokAwal]) || 0;
+            const sMasuk = parseInt(cols[colMap.stokMasuk]) || 0;
+            finalStock = sAwal + sMasuk;
+          }
+
+          let tglRaw = cols[colMap.tanggal]?.trim() || importTimestamp.split('T')[0];
+          if (tglRaw.includes('/')) {
+            const parts = tglRaw.split('/');
+            if (parts.length === 3) tglRaw = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          }
+
+          const itemId = crypto.randomUUID();
+          newItems.push({
+            id: itemId,
+            name: nama,
+            size: size,
+            stock: finalStock,
+            lastUpdated: importTimestamp
+          });
+
+          if (finalStock > 0) {
+            newTransactions.push({
+              id: crypto.randomUUID(),
+              itemId: itemId,
+              itemName: `${nama} (${size})`,
+              type: 'in',
+              amount: finalStock,
+              note: 'Impor Data Awal',
+              date: tglRaw,
+              timestamp: importTimestamp
+            });
+          }
+        }
+
+        setInventory(prev => [...prev, ...newItems]);
+        setTransactions(prev => [...newTransactions, ...prev]);
+        notify(`${newItems.length} artikel Ritus Street berhasil diimpor`);
+        e.target.value = '';
+      } catch (err) {
+        notify('Gagal memproses file CSV.', 'error');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleTransaction = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const type = formData.get('type');
+    const amount = parseInt(formData.get('amount'));
+    const note = formData.get('note');
+    const date = formData.get('date');
+
+    const updatedInventory = inventory.map(item => {
+      if (item.id === selectedItem.id) {
+        const newStock = type === 'in' ? item.stock + amount : item.stock - amount;
+        if (newStock < 0 && type === 'out') {
+          notify('Stok tidak mencukupi!', 'error');
+          return item;
+        }
+        return { ...item, stock: newStock, lastUpdated: new Date().toISOString() };
+      }
+      return item;
+    });
+
+    const targetItem = inventory.find(i => i.id === selectedItem.id);
+    if (type === 'out' && targetItem.stock < amount) return;
+
+    setInventory(updatedInventory);
+    setTransactions([{
+      id: crypto.randomUUID(),
+      itemId: selectedItem.id,
+      itemName: `${selectedItem.name} (${selectedItem.size})`,
+      type,
+      amount,
+      note,
+      date,
+      timestamp: new Date().toISOString()
+    }, ...transactions]);
+
+    setShowModal(null);
+    setSelectedItem(null);
+    notify(`Berhasil mencatat barang ${type === 'in' ? 'masuk' : 'keluar'}`);
+  };
+
+  const getArticleStats = () => {
+    const stats = {};
+    transactions.forEach(t => {
+      if (!stats[t.itemName]) {
+        stats[t.itemName] = { in: 0, out: 0 };
+      }
+      if (t.type === 'in') stats[t.itemName].in += t.amount;
+      else stats[t.itemName].out += t.amount;
+    });
+    return Object.entries(stats).map(([name, data]) => ({ name, ...data }));
+  };
+
+  const filteredInventory = inventory.filter(item => 
+    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.size?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-10">
+      {/* Bilah Navigasi */}
+      <nav className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between h-16 items-center">
+          <div className="flex items-center gap-2">
+            <div className="bg-black p-2 rounded-lg shadow-lg">
+              <Package className="text-white" size={20} />
+            </div>
+            <span className="text-xl font-black text-black tracking-tighter uppercase italic">Ritus <span className="text-indigo-600">Street</span></span>
+          </div>
+          
+          <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+            <button onClick={() => setActiveTab('inventory')} className={`px-4 py-2 rounded-lg text-[10px] font-black transition-all uppercase tracking-widest ${activeTab === 'inventory' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}>Stok</button>
+            <button onClick={() => setActiveTab('transactions')} className={`px-4 py-2 rounded-lg text-[10px] font-black transition-all uppercase tracking-widest ${activeTab === 'transactions' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}>Log</button>
+            <button onClick={() => setActiveTab('summary')} className={`px-4 py-2 rounded-lg text-[10px] font-black transition-all uppercase tracking-widest ${activeTab === 'summary' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500'}`}>Rekapan</button>
+          </div>
+        </div>
+      </nav>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* Header Dinamis Berdasarkan Tab */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tighter italic">
+              {activeTab === 'inventory' ? 'Inventory Gudang' : activeTab === 'transactions' ? 'Riwayat Aktivitas' : 'Laporan Rekapitulasi'}
+            </h1>
+            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Sistem Manajemen Stok Ritus Street</p>
+          </div>
+
+          {activeTab === 'inventory' && (
+            <div className="flex gap-2">
+              <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-5 py-2.5 bg-black text-white rounded-xl hover:bg-slate-800 transition-all text-[10px] font-black tracking-widest shadow-xl shadow-slate-200">
+                <FileSpreadsheet size={16} /> IMPOR CSV
+                <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv" className="hidden" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Tab Rekapan (Permintaan Khusus) */}
+        {activeTab === 'summary' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-wrap gap-2 mb-8 bg-white p-2 rounded-2xl border border-slate-200 w-fit shadow-sm">
+              <button onClick={() => setSummarySubTab('in')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black transition-all tracking-widest uppercase ${summarySubTab === 'in' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100' : 'text-slate-400 hover:bg-slate-50'}`}>
+                <TrendingUp size={14} /> Daftar Masuk
+              </button>
+              <button onClick={() => setSummarySubTab('out')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black transition-all tracking-widest uppercase ${summarySubTab === 'out' ? 'bg-rose-500 text-white shadow-lg shadow-rose-100' : 'text-slate-400 hover:bg-slate-50'}`}>
+                <TrendingDown size={14} /> Daftar Keluar
+              </button>
+              <button onClick={() => setSummarySubTab('stats')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black transition-all tracking-widest uppercase ${summarySubTab === 'stats' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-100' : 'text-slate-400 hover:bg-slate-50'}`}>
+                <BarChart3 size={14} /> Rekap Artikel
+              </button>
+            </div>
+
+            {/* Tabel Detail Masuk / Keluar */}
+            {(summarySubTab === 'in' || summarySubTab === 'out') && (
+              <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50/50 border-b border-slate-100">
+                    <tr>
+                      <th className="px-8 py-5 font-black text-slate-400 uppercase text-[10px] tracking-widest">Tanggal</th>
+                      <th className="px-8 py-5 font-black text-slate-400 uppercase text-[10px] tracking-widest">Artikel</th>
+                      <th className="px-8 py-5 font-black text-slate-400 uppercase text-[10px] tracking-widest text-right">Jumlah</th>
+                      <th className="px-8 py-5 font-black text-slate-400 uppercase text-[10px] tracking-widest">Keterangan</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {transactions.filter(t => t.type === summarySubTab).map(t => (
+                      <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-8 py-5 font-bold text-slate-600">{new Date(t.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                        <td className="px-8 py-5 font-black text-slate-900 uppercase italic">{t.itemName}</td>
+                        <td className={`px-8 py-5 text-right font-black text-lg ${summarySubTab === 'in' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {t.amount} <span className="text-[10px]">PCS</span>
+                        </td>
+                        <td className="px-8 py-5 text-slate-400 italic text-xs font-medium">{t.note || '-'}</td>
+                      </tr>
+                    ))}
+                    {transactions.filter(t => t.type === summarySubTab).length === 0 && (
+                      <tr><td colSpan="4" className="px-8 py-20 text-center text-slate-300 font-black uppercase tracking-widest italic">Belum Ada Data {summarySubTab === 'in' ? 'Masuk' : 'Keluar'}</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Grid Statistik Akumulasi */}
+            {summarySubTab === 'stats' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {getArticleStats().map((item, idx) => (
+                  <div key={idx} className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm hover:border-black transition-all group">
+                    <h3 className="font-black text-slate-900 uppercase italic text-sm mb-6 border-b border-slate-50 pb-4 group-hover:text-indigo-600 transition-colors">{item.name}</h3>
+                    <div className="space-y-5">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Masuk</span>
+                        <span className="text-xl font-black text-emerald-600">{item.in}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Keluar</span>
+                        <span className="text-xl font-black text-rose-600">{item.out}</span>
+                      </div>
+                      <div className="pt-4 border-t border-slate-50 flex justify-between items-center">
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Stok Saat Ini</span>
+                        <span className="text-2xl font-black text-black italic">{item.in - item.out}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab Inventaris Utama */}
+        {activeTab === 'inventory' && (
+          <div className="animate-in fade-in duration-500">
+            <div className="relative mb-8">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+              <input 
+                type="text" 
+                placeholder="Cari koleksi Ritus Street..."
+                className="w-full pl-14 pr-6 py-5 bg-white border border-slate-200 rounded-[1.5rem] focus:outline-none focus:ring-4 focus:ring-black/5 focus:border-black transition-all shadow-sm font-bold placeholder:text-slate-300"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {filteredInventory.map(item => (
+                <div key={item.id} className="bg-white border border-slate-200 rounded-[2rem] p-6 hover:shadow-xl hover:shadow-slate-200/50 transition-all group border-b-4 border-b-slate-100 hover:border-b-indigo-500">
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="text-[10px] font-black text-white bg-black px-3 py-1.5 rounded-full uppercase tracking-tighter italic">SIZE {item.size}</span>
+                  </div>
+                  <h3 className="text-lg font-black text-slate-900 uppercase italic leading-tight h-12 overflow-hidden">{item.name}</h3>
+                  <div className="mt-8 flex items-end justify-between">
+                    <div>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Stock On Hand</p>
+                      <p className={`text-4xl font-black tracking-tighter italic ${item.stock < 5 ? 'text-rose-600' : 'text-black'}`}>{item.stock}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => {setSelectedItem(item); setShowModal('transaction-in');}} className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm"><Plus size={20}/></button>
+                      <button onClick={() => {setSelectedItem(item); setShowModal('transaction-out');}} className="p-3 bg-rose-50 text-rose-600 rounded-2xl hover:bg-rose-600 hover:text-white transition-all shadow-sm"><Minus size={20}/></button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Tab Log Transaksi */}
+        {activeTab === 'transactions' && (
+          <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-sm animate-in fade-in duration-500">
+            <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
+               <h2 className="font-black text-slate-900 uppercase text-xs tracking-widest italic">Timeline Aktivitas</h2>
+               <History className="text-slate-400" size={20} />
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="bg-white">
+                    <th className="px-8 py-5 font-black text-slate-400 uppercase text-[10px] tracking-widest">Tanggal</th>
+                    <th className="px-8 py-5 font-black text-slate-400 uppercase text-[10px] tracking-widest">Artikel</th>
+                    <th className="px-8 py-5 font-black text-slate-400 uppercase text-[10px] tracking-widest text-center">Aksi</th>
+                    <th className="px-8 py-5 font-black text-slate-400 uppercase text-[10px] tracking-widest text-right">Kuantitas</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {transactions.map(t => (
+                    <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-8 py-5 font-bold text-slate-500">{new Date(t.date).toLocaleDateString('id-ID')}</td>
+                      <td className="px-8 py-5 font-black text-slate-900 uppercase italic">{t.itemName}</td>
+                      <td className="px-8 py-5 text-center">
+                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase italic ${t.type === 'in' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                          {t.type === 'in' ? 'Masuk' : 'Keluar'}
+                        </span>
+                      </td>
+                      <td className={`px-8 py-5 text-right font-black text-lg italic ${t.type === 'in' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {t.type === 'in' ? '+' : '-'}{t.amount}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Modal Input Stok */}
+      {(showModal?.startsWith('transaction')) && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[3rem] w-full max-w-md shadow-2xl overflow-hidden animate-scale-in">
+            <div className={`p-10 flex justify-between items-center ${showModal === 'transaction-in' ? 'bg-emerald-50 text-emerald-900' : 'bg-rose-50 text-rose-900'}`}>
+              <div>
+                <h2 className="text-2xl font-black uppercase tracking-tighter italic leading-none">{showModal === 'transaction-in' ? 'Barang Masuk' : 'Barang Keluar'}</h2>
+                <p className="text-[10px] font-black opacity-50 uppercase tracking-widest mt-2">{selectedItem?.name} — {selectedItem?.size}</p>
+              </div>
+              <button onClick={() => setShowModal(null)} className="p-3 bg-white/80 rounded-full hover:bg-white text-slate-500 transition-colors shadow-sm">✕</button>
+            </div>
+            <form onSubmit={handleTransaction} className="p-10 space-y-6">
+              <input type="hidden" name="type" value={showModal === 'transaction-in' ? 'in' : 'out'} />
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Kuantitas (PCS)</label>
+                <input name="amount" type="number" required min="1" className="w-full px-6 py-5 bg-slate-50 border-2 border-slate-100 rounded-3xl text-4xl font-black italic focus:border-black outline-none transition-all" placeholder="0" autoFocus />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tanggal</label>
+                <input name="date" type="date" defaultValue={new Date().toISOString().split('T')[0]} className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black italic outline-none focus:border-black" />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Keterangan</label>
+                <textarea name="note" className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl h-24 outline-none resize-none text-sm font-bold italic" placeholder="Tulis catatan transaksi di sini..."></textarea>
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button type="button" onClick={() => setShowModal(null)} className="flex-1 py-5 font-black text-slate-400 bg-slate-100 rounded-3xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-colors">Batal</button>
+                <button type="submit" className={`flex-1 py-5 font-black text-white rounded-3xl shadow-xl uppercase text-[10px] tracking-widest italic ${showModal === 'transaction-in' ? 'bg-emerald-600 shadow-emerald-200' : 'bg-rose-600 shadow-rose-200'}`}>Konfirmasi</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Notification */}
+      {notification && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 px-8 py-5 bg-black text-white rounded-full font-black shadow-2xl flex items-center gap-4 z-50 animate-bounce-in border border-slate-800">
+          <div className="p-1.5 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-500/20"><Package size={16} /></div>
+          <span className="uppercase text-[10px] tracking-[0.2em] italic">{notification.message}</span>
+        </div>
+      )}
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes scale-in { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes bounce-in { 0% { transform: translate(-50%, 60px); opacity: 0; } 100% { transform: translate(-50%, 0); opacity: 1; } }
+        .animate-scale-in { animation: scale-in 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+        .animate-bounce-in { animation: bounce-in 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards; }
+      `}} />
+    </div>
+  );
+}
