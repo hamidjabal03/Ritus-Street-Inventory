@@ -8,73 +8,53 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; overflow-x: hidden; background-color: #F8FAFC; }
+        .ritus-card { border-radius: 2.5rem; transition: all 0.3s ease; }
+        .ritus-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
+        .glass-header { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(0,0,0,0.05); }
         
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #F8FAFC;
-            color: #0F172A;
-        }
-
-        .ritus-card { 
-            border-radius: 2.5rem; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid rgba(0,0,0,0.05);
-        }
-        
-        .ritus-card:hover { 
-            transform: translateY(-5px); 
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1); 
-            border-color: #6366f1;
-        }
-
-        .glass-header { 
-            background: rgba(255, 255, 255, 0.8); 
-            backdrop-filter: blur(12px); 
-            border-bottom: 1px solid rgba(0,0,0,0.05); 
-        }
-
         #loading-overlay {
             position: fixed; inset: 0; background: #0F172A; z-index: 9999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             color: white; transition: opacity 0.5s ease;
         }
-
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button {
-            -webkit-appearance: none; margin: 0;
-        }
     </style>
 </head>
 <body>
-    <!-- Loading Screen -->
     <div id="loading-overlay">
         <div class="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p class="text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">RITUS CLOUD CONNECTING</p>
-        <button id="bypass-btn" class="mt-8 text-[9px] text-slate-500 underline hidden">MASUK MANUAL (BYPASS)</button>
+        <p class="text-[10px] font-black uppercase tracking-widest animate-pulse">Menghubungkan ke Ritus Cloud...</p>
+        <button id="bypass-btn" class="mt-8 text-[9px] text-slate-500 underline hidden">Masuk Manual (Bypass)</button>
     </div>
 
     <div id="root"></div>
 
-    <!-- Firebase System -->
+    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, onSnapshot, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, addDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // Tampilkan tombol bypass jika > 5 detik
         setTimeout(() => {
             const btn = document.getElementById('bypass-btn');
             if(btn) btn.classList.remove('hidden');
-        }, 4000);
+        }, 5000);
 
         try {
-            const config = JSON.parse(__firebase_config || '{}');
-            const app = initializeApp(config);
+            const firebaseConfig = JSON.parse(__firebase_config || '{}');
+            const app = initializeApp(firebaseConfig);
             const auth = getAuth(app);
             const db = getFirestore(app);
             
-            window.RitusFirebase = { auth, db, collection, doc, setDoc, onSnapshot, addDoc, deleteDoc, signInAnonymously, onAuthStateChanged };
+            // Expose ke global agar React bisa akses
+            window.RitusFirebase = { 
+                auth, db, collection, doc, setDoc, onSnapshot, addDoc, deleteDoc, query,
+                signInAnonymously, signInWithCustomToken, onAuthStateChanged 
+            };
+            console.log("Firebase System Initialized");
         } catch (e) {
-            console.error("Firebase Error", e);
+            console.error("Firebase Init Error", e);
         }
     </script>
 
@@ -83,237 +63,250 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
+
+        const APP_LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAACXBIWXMAAAsTAAALEwEAmpwYAAAFmElEQVR4nO2dW2hcRRSGv5OkkbRpqhZra2N9Eqq0VfBFfBAUfFDe9KmgfRDUiooPgtIqPlS8tH0RfBF8UfBFUfBBX/qi4osvKl6qIig+pL60mqZpmsZkkuxks9mY7GRzssnZ/v+DwwRyeOf8s2fOnDkHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADpE9wOAX4mI7gcAm6T7AXD7REQPAlUoU8YfAtU4DMT6vO3Z77v6oK/Zp60YAbf0S2fO7vD+9u7v79UfC5M565v6pK9v99oG7083+vIun+7Y382K97n6U8e+uR+S+X29/mR93u1D9vV8H+q+78N9v79D19u/0Ncl68uR9X70eT+73qOve/p6m67H1/vX9Yh6/7p69HVXvR8Z36u66L6v6968H94O3A6u5m76+mB756S/63n/Z3/v6N6S9Xf09bbupz7p9+v9677O09f9fX0gXW/X9XRdX99L1+v1/XVdH7SvC/q6v68Lur9fX+/X98V0v8B+X99T17fS19v39W19H319K33d/X8Z6FmEAg9j6hDmgU9hA6U9gA3AFrAN/AK87e/zFmPqB9A/CgUezA5hHvgm8Bl0Uf8X07H1D+jfhAIPYA6Bv/m7X+E0zAF942Cg9An8GZzAn4EvYA3YA66CD2F8FAo8gDkE/t+I9DnsAf8LPAi8C32D8E36P6DAbYcC8A+h0MscAm8BX9N70f8J6B+FAg9jXNrfv4XpX4Wp77Y9SveG96Z8v6593+T9KdrH6F7VPrH9W9v9vV/H/qZpX7V/e3f/oG7/sPaN/9r/99Y+0B7Vv3W8v878P6F/t7UfaI9oH+reH+rf6e7v+v976H9f+9/v7u8V6W/f7O/+0v+Uf0O/lH/7v6f/Zf9P87fX+4/o39X/E/69pf+H+XfA/9f8m/D/JP/G/F/w/19Y39I+rX3S38f65X0H/t976P/v8P/f6P8/p/8H9P+A/u/378X+PdH/Xf4/9NfB/r/y78T+p/X3W6GvO7q38PZ0of8Z3asYlY/p+gDdm+mH2zsn/V36u0rXf9fX6pY96G+iP8T96p98rL7Zf9WlH63L/pS+7O+W/WnZn6Z9pS76Y/vYF9LHvlQX+6K/q5S62Of66z/93e878L886O/O+6K/hZf9vX1/L36F78W5/6YF8A98An0L+Bb6e6Cvef+39X1097u9X7rYn/Kj+fWlvv0pX76fU5pfc8rXmF+jfn2pX5+v0f9qR686X9/Pq9LXl/P68m6f7773fK86D+n6eO/3+v05fX6976e66e9Hdr/u/9H2Ovt9m8vH8O8D6Vp/5f9K/v0V0eW+/Z1WfX6WfS1W6f7C6P7Ofp90fV79Puh8fX6/875P0+6X5P88/P68uL9vT/R+6f3S/6/of+L7D91f7e9v/p+83+7/T/x/9f/X/O+v777p/pPuv+f/U/X/7/+98rW/6Oqj7h/q6p/tF9/f09YB+H9H9Q7rf/W8z+r9Xv07V35Pr63T6On3dn9fX7U/W1+0O+tp9vbvW/+VvX7T//fW1un0Nfa1uP9DX0NbW/Xn9N9S1t68vun9F9zf09U19fa/779G/pP9P/Vv7f17/Vv+W/mf7X/H/Rf8X/Z/v/9f9K7p/Vvcv+H9m96P+C/r3q/0v6f6f7r+s+5d0f6v779Tf3/T/Yf9S/qW6f6H7X9L9df0/0v8X9F/S/0n/Z/rfVvdfvK6v870v5z6f/76Y+77e9/G853Ofp6+n72Pr67H19dhfXvOez/u+fT69Zz979vL0vFp9Huv78n68D6/N/vKq81f+8qzPr52/UqGzO7y/vfv7e/XHYmXO+qY+6et6/0X9Z/ufrf/p+p8OfA6BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPyP+Q9p9pYyE+pT2QAAAABJRU5ErkJggg==";
 
         function App() {
+            const [user, setUser] = useState(null);
             const [inventory, setInventory] = useState([]);
             const [transactions, setTransactions] = useState([]);
-            const [tab, setTab] = useState('inventory');
-            const [search, setSearch] = useState('');
-            const [showModal, setShowModal] = useState(null);
-            const [selectedItem, setSelectedItem] = useState(null);
+            const [tab, setTab] = useState('dashboard');
+            const [isSidebarOpen, setIsSidebarOpen] = useState(false);
             
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'ritus-street-v1';
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'ritus-street-inventory';
 
+            // Langkah 1: Inisialisasi Auth
             useEffect(() => {
-                const interval = setInterval(() => {
+                const initAuth = async () => {
                     if (window.RitusFirebase) {
-                        const { auth, signInAnonymously, onAuthStateChanged, db, collection, onSnapshot } = window.RitusFirebase;
+                        const { auth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } = window.RitusFirebase;
                         
-                        signInAnonymously(auth).catch(console.error);
-                        
-                        onAuthStateChanged(auth, (user) => {
-                            if (user) {
-                                document.getElementById('loading-overlay').style.opacity = '0';
-                                setTimeout(() => document.getElementById('loading-overlay')?.remove(), 500);
+                        try {
+                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                                await signInWithCustomToken(auth, __initial_auth_token);
+                            } else {
+                                await signInAnonymously(auth);
+                            }
+                        } catch (err) {
+                            console.error("Authentication failed:", err);
+                        }
 
-                                const invRef = collection(db, 'artifacts', appId, 'public', 'data', 'inventory');
-                                const transRef = collection(db, 'artifacts', appId, 'public', 'data', 'transactions');
-
-                                onSnapshot(invRef, (s) => setInventory(s.docs.map(d => ({id: d.id, ...d.data()}))));
-                                onSnapshot(transRef, (s) => setTransactions(s.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp))));
+                        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+                            setUser(currentUser);
+                            if (currentUser) {
+                                // Hilangkan loading screen setelah user terdeteksi
+                                const overlay = document.getElementById('loading-overlay');
+                                if(overlay) {
+                                    overlay.style.opacity = '0';
+                                    setTimeout(() => overlay.remove(), 500);
+                                }
                             }
                         });
+                        return unsubscribe;
+                    }
+                };
+
+                const interval = setInterval(() => {
+                    if (window.RitusFirebase) {
+                        initAuth();
                         clearInterval(interval);
                     }
-                }, 500);
-
-                document.getElementById('bypass-btn')?.addEventListener('click', () => {
-                    document.getElementById('loading-overlay')?.remove();
-                });
+                }, 100);
 
                 return () => clearInterval(interval);
             }, []);
 
-            useEffect(() => { if(window.lucide) window.lucide.createIcons(); }, [tab, inventory]);
+            // Langkah 2: Load Data (Hanya jika user sudah ada)
+            useEffect(() => {
+                if (!user || !window.RitusFirebase) return;
 
-            const handleUpdateStock = async (e) => {
-                e.preventDefault();
-                const amount = parseInt(e.target.amount.value);
-                const type = showModal === 'in' ? 'in' : 'out';
-                const newStock = type === 'in' ? (selectedItem.stock || 0) + amount : (selectedItem.stock || 0) - amount;
-
-                if(newStock < 0) return alert("Stok tidak cukup!");
-
-                const { db, doc, setDoc, addDoc, collection } = window.RitusFirebase;
+                const { db, collection, onSnapshot, query } = window.RitusFirebase;
                 
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'inventory', selectedItem.id), {
-                    ...selectedItem, stock: newStock
-                }, { merge: true });
+                // Menggunakan path yang sesuai aturan: /artifacts/{appId}/public/data/{collection}
+                const invRef = collection(db, 'artifacts', appId, 'public', 'data', 'inventory');
+                const transRef = collection(db, 'artifacts', appId, 'public', 'data', 'transactions');
 
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'transactions'), {
-                    itemId: selectedItem.id,
-                    itemName: selectedItem.name,
-                    size: selectedItem.size,
-                    type,
-                    amount,
-                    timestamp: new Date().toISOString()
-                });
+                const unsubInv = onSnapshot(invRef, 
+                    (snapshot) => {
+                        setInventory(snapshot.docs.map(d => ({id: d.id, ...d.data()})));
+                    },
+                    (error) => console.error("Inventory Listener Error:", error)
+                );
 
-                setShowModal(null);
-            };
+                const unsubTrans = onSnapshot(transRef, 
+                    (snapshot) => {
+                        const data = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                        // Sortir di memori sesuai Rule 2
+                        setTransactions(data.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)));
+                    },
+                    (error) => console.error("Transaction Listener Error:", error)
+                );
+
+                return () => {
+                    unsubInv();
+                    unsubTrans();
+                };
+            }, [user]);
+
+            useEffect(() => { 
+                if(window.lucide) window.lucide.createIcons(); 
+            }, [tab, inventory, isSidebarOpen, user]);
+
+            // Handler Bypass Manual
+            useEffect(() => {
+                const btn = document.getElementById('bypass-btn');
+                if(btn) {
+                    btn.onclick = () => {
+                        document.getElementById('loading-overlay')?.remove();
+                    };
+                }
+            }, []);
+
+            if (!user) return null; // Tunggu auth
 
             return (
-                <div className="min-h-screen flex flex-col md:flex-row">
-                    {/* Navigation Sidebar */}
-                    <div className="w-full md:w-64 bg-slate-900 text-white p-8 flex flex-col shrink-0">
-                        <div className="mb-12 flex items-center gap-3">
-                            <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center font-black italic text-xl">R</div>
-                            <h1 className="font-black italic text-2xl tracking-tighter">RITUS</h1>
+                <div className="min-h-screen">
+                    {/* Sidebar */}
+                    <div className={`fixed inset-y-0 left-0 w-64 bg-slate-900 text-white z-[100] transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+                        <div className="p-8 flex items-center gap-3">
+                            <img src={APP_LOGO} className="w-8 h-8" alt="Logo" />
+                            <h1 className="font-black italic text-lg tracking-tighter">RITUS</h1>
                         </div>
-                        
-                        <nav className="space-y-3 flex-1">
+                        <nav className="p-4 space-y-2">
                             {[
-                                { id: 'inventory', icon: 'package', label: 'STOK BARANG' },
-                                { id: 'history', icon: 'clock', label: 'RIWAYAT' }
+                                { id: 'dashboard', icon: 'layout-dashboard', label: 'DASHBOARD' },
+                                { id: 'inventory', icon: 'package', label: 'INVENTORY' },
+                                { id: 'history', icon: 'history', label: 'HISTORY' }
                             ].map(item => (
                                 <button 
-                                    key={item.id}
-                                    onClick={() => setTab(item.id)}
-                                    className={`w-full flex items-center gap-4 p-4 rounded-2xl text-[10px] font-black tracking-widest transition-all ${tab === item.id ? 'bg-indigo-600 shadow-lg shadow-indigo-500/20' : 'text-slate-500 hover:text-white'}`}
+                                    key={item.id} 
+                                    onClick={() => {setTab(item.id); setIsSidebarOpen(false)}} 
+                                    className={`w-full flex items-center gap-3 p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-colors ${tab === item.id ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
                                 >
                                     <i data-lucide={item.icon} className="w-4 h-4"></i>
                                     {item.label}
                                 </button>
                             ))}
                         </nav>
-
-                        <div className="mt-auto pt-8 border-t border-slate-800">
-                            <p className="text-[8px] font-black text-slate-500 tracking-[0.2em]">CLOUD STATUS: <span className="text-emerald-500 underline">ONLINE</span></p>
-                        </div>
                     </div>
 
-                    {/* Main Content */}
-                    <div className="flex-1 flex flex-col h-screen overflow-hidden">
-                        <header className="glass-header h-24 px-8 flex items-center justify-between shrink-0">
-                            <div className="relative w-full max-w-md">
-                                <i data-lucide="search" className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
-                                <input 
-                                    type="text" 
-                                    placeholder="CARI ARTIKEL..."
-                                    className="w-full pl-12 pr-4 py-3 bg-slate-100 rounded-2xl text-[10px] font-black outline-none focus:ring-2 ring-indigo-500/20"
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                />
-                            </div>
+                    <div className="md:ml-64 transition-all duration-300">
+                        <header className="glass-header h-20 px-6 flex items-center justify-between sticky top-0 z-50">
                             <div className="flex items-center gap-4">
-                                <div className="text-right hidden md:block">
-                                    <p className="text-[10px] font-black italic">RITUS ADMIN</p>
-                                    <p className="text-[8px] font-bold text-slate-400 uppercase">Warehouse 01</p>
-                                </div>
-                                <div className="w-12 h-12 bg-slate-200 rounded-full border-2 border-white shadow-sm overflow-hidden">
-                                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Ritus" alt="avatar" />
+                                <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 text-slate-600">
+                                    <i data-lucide="menu"></i>
+                                </button>
+                                <h2 className="font-black italic uppercase text-sm tracking-widest text-slate-400">{tab}</h2>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className="text-[9px] font-bold text-slate-400 hidden sm:block uppercase tracking-tighter">Connected as {user.uid.substring(0,8)}...</span>
+                                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center border border-indigo-100">
+                                    <i data-lucide="user" className="w-5 h-5"></i>
                                 </div>
                             </div>
                         </header>
 
-                        <main className="flex-1 overflow-y-auto p-8 bg-[#F8FAFC]">
-                            {tab === 'inventory' ? (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                    {inventory.filter(i => i.name.toLowerCase().includes(search.toLowerCase())).map(item => (
-                                        <div key={item.id} className="ritus-card bg-white p-8 flex flex-col">
-                                            <div className="flex justify-between items-start mb-6">
-                                                <span className="text-[10px] font-black bg-slate-100 px-3 py-1 rounded-full uppercase tracking-widest text-slate-500 italic">
-                                                    Size {item.size || 'ALL'}
-                                                </span>
-                                                <i data-lucide="more-horizontal" className="w-4 h-4 text-slate-300"></i>
-                                            </div>
-                                            
-                                            <h3 className="text-2xl font-black italic uppercase leading-none mb-2 tracking-tight">{item.name}</h3>
-                                            <p className="text-[9px] font-bold text-slate-400 mb-8 uppercase tracking-widest">{item.category || 'Apparel'}</p>
-                                            
-                                            <div className="mt-auto flex items-end justify-between">
-                                                <div>
-                                                    <p className="text-[8px] font-black text-slate-300 uppercase mb-1">Stock Available</p>
-                                                    <p className="text-5xl font-black italic tracking-tighter text-slate-900">{item.stock || 0}</p>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <button onClick={() => {setSelectedItem(item); setShowModal('in')}} className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/30">
-                                                        <i data-lucide="plus" className="w-5 h-5"></i>
-                                                    </button>
-                                                    <button onClick={() => {setSelectedItem(item); setShowModal('out')}} className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center hover:bg-black transition-colors shadow-lg shadow-slate-900/20">
-                                                        <i data-lucide="minus" className="w-5 h-5"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
+                        <main className="p-6 max-w-6xl mx-auto">
+                            {tab === 'dashboard' && (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                    <div className="bg-white p-8 ritus-card border shadow-sm border-slate-100">
+                                        <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 text-slate-400">
+                                            <i data-lucide="layers"></i>
                                         </div>
-                                    ))}
+                                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">Total SKU</p>
+                                        <h3 className="text-5xl font-black italic text-slate-900 tracking-tighter">{inventory.length}</h3>
+                                    </div>
+                                    <div className="bg-white p-8 ritus-card border shadow-sm border-slate-100">
+                                        <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6 text-indigo-600">
+                                            <i data-lucide="package"></i>
+                                        </div>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">Total Stock</p>
+                                        <h3 className="text-5xl font-black italic text-indigo-600 tracking-tighter">
+                                            {inventory.reduce((a, b) => a + (b.stock || 0), 0)}
+                                        </h3>
+                                    </div>
+                                    <div className="bg-white p-8 ritus-card border shadow-sm border-slate-100">
+                                        <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-6 text-emerald-600">
+                                            <i data-lucide="activity"></i>
+                                        </div>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">Log Transaksi</p>
+                                        <h3 className="text-5xl font-black italic text-emerald-500 tracking-tighter">{transactions.length}</h3>
+                                    </div>
                                 </div>
-                            ) : (
-                                <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
-                                    <table className="w-full text-left">
-                                        <thead className="bg-slate-50">
-                                            <tr>
-                                                <th className="px-8 py-6 text-[10px] font-black uppercase text-slate-400 tracking-widest">Artikel / Waktu</th>
-                                                <th className="px-8 py-6 text-[10px] font-black uppercase text-slate-400 tracking-widest">Tipe</th>
-                                                <th className="px-8 py-6 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Qty</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-50">
-                                            {transactions.map(t => (
-                                                <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
-                                                    <td className="px-8 py-6">
-                                                        <p className="font-black italic text-sm uppercase tracking-tight">{t.itemName} <span className="text-slate-300 ml-1">({t.size})</span></p>
-                                                        <p className="text-[9px] font-bold text-slate-400 mt-1">{new Date(t.timestamp).toLocaleString('id-ID')}</p>
-                                                    </td>
-                                                    <td className="px-8 py-6">
-                                                        <span className={`px-4 py-1.5 rounded-full text-[9px] font-black italic uppercase tracking-widest ${t.type === 'in' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                                                            {t.type === 'in' ? 'BARANG MASUK' : 'BARANG KELUAR'}
-                                                        </span>
-                                                    </td>
-                                                    <td className={`px-8 py-6 text-right font-black italic text-2xl ${t.type === 'in' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                                        {t.type === 'in' ? '+' : '-'}{t.amount}
-                                                    </td>
+                            )}
+
+                            {tab === 'inventory' && (
+                                <div className="space-y-6 animate-in fade-in duration-500">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {inventory.map(item => (
+                                            <div key={item.id} className="bg-white p-6 ritus-card border shadow-sm border-slate-100 flex justify-between items-center group">
+                                                <div>
+                                                    <h4 className="font-black italic uppercase text-lg text-slate-800 leading-none group-hover:text-indigo-600 transition-colors">{item.name}</h4>
+                                                    <p className="text-[9px] font-bold text-slate-400 mt-2 uppercase italic tracking-widest">{item.category} • {item.size || 'ALL'}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-3xl font-black italic tracking-tighter text-slate-900 leading-none">
+                                                        {item.stock ?? 0}
+                                                    </p>
+                                                    <p className="text-[8px] font-black text-slate-300 uppercase italic">PCS</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {inventory.length === 0 && (
+                                        <div className="py-32 text-center">
+                                            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-200">
+                                                <i data-lucide="package-search" className="w-10 h-10"></i>
+                                            </div>
+                                            <p className="text-slate-300 font-black uppercase text-xs tracking-widest">Belum ada data barang.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {tab === 'history' && (
+                                <div className="bg-white ritus-card border border-slate-100 shadow-sm overflow-hidden animate-in fade-in duration-500">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-slate-50 border-b border-slate-100">
+                                                <tr>
+                                                    <th className="p-6 text-[9px] font-black uppercase text-slate-400 tracking-widest">Detail Item</th>
+                                                    <th className="p-6 text-[9px] font-black uppercase text-slate-400 tracking-widest text-center">Tipe</th>
+                                                    <th className="p-6 text-[9px] font-black uppercase text-slate-400 tracking-widest text-right">Qty</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50">
+                                                {transactions.map(t => (
+                                                    <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
+                                                        <td className="p-6">
+                                                            <p className="font-black text-xs uppercase text-slate-800 italic">{t.itemName} <span className="text-slate-300">({t.size})</span></p>
+                                                            <p className="text-[8px] text-slate-400 font-bold uppercase mt-1">
+                                                                {new Date(t.timestamp).toLocaleDateString('id-ID')} • {new Date(t.timestamp).toLocaleTimeString('id-ID')}
+                                                            </p>
+                                                        </td>
+                                                        <td className="p-6 text-center">
+                                                            <span className={`px-4 py-1.5 rounded-full text-[8px] font-black italic uppercase ${t.type === 'in' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                                                {t.type === 'in' ? 'IN' : 'OUT'}
+                                                            </span>
+                                                        </td>
+                                                        <td className={`p-6 text-right font-black italic text-2xl tracking-tighter ${t.type === 'in' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                            {t.type === 'in' ? '+' : '-'}{t.amount}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {transactions.length === 0 && (
+                                        <div className="py-20 text-center">
+                                            <p className="text-slate-300 font-black uppercase text-[10px] tracking-widest italic">Belum ada riwayat transaksi.</p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </main>
                     </div>
-
-                    {/* Transaction Modal */}
-                    {showModal && (
-                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-6">
-                            <div className="bg-white rounded-[3rem] w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in duration-200">
-                                <div className={`p-10 ${showModal === 'in' ? 'bg-indigo-600' : 'bg-slate-900'} text-white`}>
-                                    <h2 className="text-2xl font-black italic uppercase tracking-tighter mb-1">
-                                        {showModal === 'in' ? 'TAMBAH STOK' : 'KELUARKAN BARANG'}
-                                    </h2>
-                                    <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest">{selectedItem?.name} (Size {selectedItem?.size})</p>
-                                </div>
-                                <form onSubmit={handleUpdateStock} className="p-10">
-                                    <div className="mb-10 text-center">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 italic">Masukkan Jumlah (PCS)</p>
-                                        <input 
-                                            name="amount" 
-                                            type="number" 
-                                            required 
-                                            autoFocus
-                                            className="w-full text-center text-7xl font-black italic text-slate-900 outline-none bg-transparent tracking-tighter" 
-                                            placeholder="0"
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <button 
-                                            type="button" 
-                                            onClick={() => setShowModal(null)}
-                                            className="py-5 bg-slate-100 text-slate-400 rounded-3xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-colors"
-                                        >
-                                            BATAL
-                                        </button>
-                                        <button 
-                                            type="submit" 
-                                            className={`py-5 text-white rounded-3xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all ${showModal === 'in' ? 'bg-indigo-600 shadow-indigo-500/20 hover:bg-indigo-700' : 'bg-slate-900 shadow-slate-900/20 hover:bg-black'}`}
-                                        >
-                                            SIMPAN DATA
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    )}
                 </div>
             );
         }
