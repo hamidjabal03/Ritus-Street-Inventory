@@ -21,6 +21,9 @@
             transform: translateY(-4px);
             box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
         }
+        /* Loading skeleton effect */
+        .skeleton { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; }
+        @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     </style>
 </head>
 <body class="bg-[#F8FAFC] text-slate-900">
@@ -51,6 +54,9 @@
 
             useEffect(() => {
                 const init = async () => {
+                    // Timeout safety: Jika auth gagal dalam 5 detik, paksa masuk ke mode offline/guest
+                    const timeout = setTimeout(() => { if (!user) setLoading(false); }, 5000);
+
                     try {
                         const firebaseConfig = JSON.parse(__firebase_config);
                         const app = window.Firebase.initializeApp(firebaseConfig);
@@ -66,10 +72,12 @@
                             if (u) {
                                 setUser(u);
                                 setLoading(false);
+                                clearTimeout(timeout);
                             }
                         });
                     } catch (err) {
                         console.error("Auth Init Error:", err);
+                        setLoading(false); // Tetap matikan loading agar UI muncul
                     }
                 };
                 init();
@@ -85,19 +93,20 @@
                 const unsubInv = window.Firebase.onSnapshot(invPath, (snap) => {
                     const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     setInventory(data);
-                }, (err) => console.error("Firestore Error:", err));
+                }, (err) => console.error("Firestore Inv Error:", err));
 
                 const unsubTrans = window.Firebase.onSnapshot(transPath, (snap) => {
                     const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     setTransactions(data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
-                }, (err) => console.error("Firestore Error:", err));
+                }, (err) => console.error("Firestore Trans Error:", err));
 
                 return () => { unsubInv(); unsubTrans(); };
             }, [user]);
 
-            useEffect(() => { if(window.lucide) window.lucide.createIcons(); }, [tab, inventory, isSidebarOpen, categoryFilter, searchQuery]);
+            useEffect(() => { if(window.lucide) window.lucide.createIcons(); }, [tab, inventory, isSidebarOpen, categoryFilter, searchQuery, loading]);
 
             const handleUpdateStock = async (item, size, change, type) => {
+                if (!user) return;
                 const db = window.Firebase.getFirestore();
                 const docRef = window.Firebase.doc(db, 'artifacts', appId, 'public', 'data', 'inventory', item.id);
                 
@@ -132,28 +141,24 @@
                 const reader = new FileReader();
                 reader.onload = async (event) => {
                     const text = event.target.result;
-                    const lines = text.split('\n').filter(line => line.trim() !== '');
+                    const lines = text.split('\n').map(l => l.trim()).filter(l => l !== '' && !l.startsWith(';;'));
                     const db = window.Firebase.getFirestore();
                     
-                    // Lewati header (Nama;Info;Jenis;Tipe;Jumlah;Waktu)
                     for (let i = 1; i < lines.length; i++) {
                         const parts = lines[i].split(';');
-                        if (parts.length < 5) continue;
+                        if (parts.length < 5 || !parts[0]) continue;
 
                         const [name, info, categoryRaw, typeRaw, amountStr] = parts;
                         const category = categoryRaw.toLowerCase().includes('apparel') ? 'apparel' : 'aksesoris';
                         const type = typeRaw.toLowerCase() === 'in' ? 'in' : 'out';
                         const amount = parseInt(amountStr) || 0;
 
-                        // Cari apakah item sudah ada
                         let existingItem = inventory.find(item => item.name.trim().toLowerCase() === name.trim().toLowerCase());
 
                         if (existingItem) {
-                            // Update yang ada
                             const change = type === 'in' ? amount : -amount;
                             await handleUpdateStock(existingItem, category === 'apparel' ? info.trim() : null, change, type);
                         } else {
-                            // Buat baru
                             const newItem = {
                                 name: name.trim(),
                                 category: category,
@@ -166,9 +171,7 @@
                                 newItem.stock = amount;
                             }
                             
-                            const docRef = await window.Firebase.addDoc(window.Firebase.collection(db, 'artifacts', appId, 'public', 'data', 'inventory'), newItem);
-                            
-                            // Tambah log awal
+                            await window.Firebase.addDoc(window.Firebase.collection(db, 'artifacts', appId, 'public', 'data', 'inventory'), newItem);
                             await window.Firebase.addDoc(window.Firebase.collection(db, 'artifacts', appId, 'public', 'data', 'transactions'), {
                                 itemName: newItem.name,
                                 itemCategory: newItem.category,
@@ -197,9 +200,9 @@
             };
 
             if (loading) return (
-                <div className="h-screen flex flex-col items-center justify-center bg-slate-900 text-white">
-                    <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em]">Ritus Loading...</p>
+                <div className="h-screen flex flex-col items-center justify-center bg-slate-950 text-white">
+                    <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-6"></div>
+                    <p className="text-[12px] font-black uppercase tracking-[0.4em] animate-pulse">Menghubungkan Ritus Cloud...</p>
                 </div>
             );
 
@@ -229,13 +232,13 @@
                             ))}
                         </nav>
                         <div className="absolute bottom-8 left-0 w-full px-6">
-                            <button onClick={() => fileInputRef.current.click()} className="w-full flex items-center justify-center gap-2 p-4 bg-slate-800 hover:bg-indigo-500 rounded-2xl text-[10px] font-black uppercase transition-all tracking-widest">
+                            <button onClick={() => fileInputRef.current.click()} className="w-full flex items-center justify-center gap-2 p-4 bg-slate-800 hover:bg-indigo-500 rounded-2xl text-[10px] font-black uppercase transition-all tracking-widest border border-white/5">
                                 <i data-lucide="upload" size="14"></i> Import CSV
                             </button>
                         </div>
                     </div>
 
-                    {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[140]"></div>}
+                    {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[140]"></div>}
 
                     {/* HEADER */}
                     <header className="glass-card h-20 px-6 flex items-center justify-between sticky top-0 z-50">
@@ -255,14 +258,17 @@
 
                     <main className="max-w-6xl mx-auto p-6 mt-4">
                         {tab === 'dashboard' && (
-                            <div className="space-y-8 animate-in fade-in duration-500">
+                            <div className="space-y-8 animate-in fade-in duration-700">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     {[
-                                        { label: 'Total Artikel', val: stats.totalItems, color: 'text-slate-900' },
-                                        { label: 'Stok Terhitung', val: stats.totalStock, color: 'text-indigo-600' },
-                                        { label: 'Stok Menipis', val: stats.lowStock, color: 'text-rose-500' }
+                                        { label: 'Total Artikel', val: stats.totalItems, color: 'text-slate-900', icon: 'layers' },
+                                        { label: 'Stok Terhitung', val: stats.totalStock, color: 'text-indigo-600', icon: 'package' },
+                                        { label: 'Stok Menipis', val: stats.lowStock, color: 'text-rose-500', icon: 'alert-triangle' }
                                     ].map((s, idx) => (
-                                        <div key={idx} className="bg-white p-8 ritus-card border shadow-sm">
+                                        <div key={idx} className="bg-white p-8 ritus-card border shadow-sm relative overflow-hidden group">
+                                            <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-10 transition-opacity">
+                                                <i data-lucide={s.icon} size="80"></i>
+                                            </div>
                                             <p className="text-[10px] font-black text-slate-400 uppercase italic mb-1">{s.label}</p>
                                             <h3 className={`text-5xl font-black italic tracking-tighter ${s.color}`}>{s.val}</h3>
                                         </div>
@@ -272,21 +278,26 @@
                                 <div className="bg-white p-8 ritus-card border shadow-sm">
                                     <h4 className="font-black italic uppercase text-sm mb-6 flex items-center gap-2"><i data-lucide="activity" size="16"></i> Aktivitas Terakhir</h4>
                                     <div className="space-y-3">
-                                        {transactions.slice(0, 5).map(t => (
-                                            <div key={t.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                                        {transactions.slice(0, 8).map(t => (
+                                            <div key={t.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-colors">
                                                 <div className="flex items-center gap-3">
                                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${t.type === 'in' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
-                                                        <i data-lucide={t.type === 'in' ? 'plus' : 'minus'} size="14"></i>
+                                                        <i data-lucide={t.type === 'in' ? 'arrow-down-left' : 'arrow-up-right'} size="14"></i>
                                                     </div>
                                                     <div>
                                                         <p className="font-black text-[10px] uppercase italic">{t.itemName}</p>
-                                                        <p className="text-[8px] font-bold text-slate-400 uppercase">{t.info} • {new Date(t.timestamp).toLocaleTimeString()}</p>
+                                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{t.info} • {new Date(t.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                                                     </div>
                                                 </div>
                                                 <p className={`font-black italic text-lg ${t.type === 'in' ? 'text-emerald-500' : 'text-rose-500'}`}>{t.type === 'in' ? '+' : '-'}{t.amount}</p>
                                             </div>
                                         ))}
-                                        {transactions.length === 0 && <p className="text-center py-10 text-[10px] font-bold text-slate-400 uppercase italic">Belum ada riwayat aktivitas</p>}
+                                        {transactions.length === 0 && (
+                                            <div className="py-12 flex flex-col items-center justify-center text-slate-300">
+                                                <i data-lucide="inbox" size="32" className="mb-2"></i>
+                                                <p className="text-[10px] font-bold uppercase italic">Belum ada riwayat aktivitas</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -300,11 +311,8 @@
                                         <button onClick={() => setCategoryFilter('aksesoris')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${categoryFilter === 'aksesoris' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-400'}`}>Aksesoris</button>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button onClick={() => fileInputRef.current.click()} className="bg-white border px-4 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
-                                            <i data-lucide="file-text" size="14"></i> Import CSV
-                                        </button>
                                         <button onClick={() => setShowModal('add')} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-200 flex items-center gap-2">
-                                            <i data-lucide="plus-circle" size="14"></i> Tambah Artikel
+                                            <i data-lucide="plus" size="14"></i> Tambah Artikel
                                         </button>
                                     </div>
                                 </div>
@@ -314,7 +322,7 @@
                                         <div key={item.id} className="bg-white p-6 ritus-card border shadow-sm">
                                             <div className="flex justify-between items-start mb-6">
                                                 <div>
-                                                    <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest">ARTIKEL</span>
+                                                    <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest italic">ARTIKEL</span>
                                                     <h3 className="font-black italic uppercase text-lg tracking-tighter leading-none">{item.name}</h3>
                                                 </div>
                                                 <button onClick={async () => {if(confirm('Hapus artikel ini?')) await window.Firebase.deleteDoc(window.Firebase.doc(window.Firebase.getFirestore(), 'artifacts', appId, 'public', 'data', 'inventory', item.id))}} className="text-slate-200 hover:text-rose-500 transition-colors p-2"><i data-lucide="trash-2" size="14"></i></button>
@@ -356,16 +364,16 @@
                         {tab === 'history' && (
                             <div className="bg-white ritus-card border shadow-sm overflow-hidden animate-in fade-in duration-500">
                                 <div className="p-6 border-b bg-slate-50 flex justify-between items-center">
-                                    <h4 className="font-black italic uppercase text-sm">Log Transaksi</h4>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{transactions.length} Entri</p>
+                                    <h4 className="font-black italic uppercase text-sm">Log Transaksi Cloud</h4>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{transactions.length} Entri Terdeteksi</p>
                                 </div>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left">
                                         <thead className="border-b">
                                             <tr>
-                                                <th className="p-6 text-[9px] font-black uppercase text-slate-400 italic">Tanggal & Waktu</th>
+                                                <th className="p-6 text-[9px] font-black uppercase text-slate-400 italic">Waktu</th>
                                                 <th className="p-6 text-[9px] font-black uppercase text-slate-400 italic">Produk</th>
-                                                <th className="p-6 text-[9px] font-black uppercase text-slate-400 italic text-center">Detail</th>
+                                                <th className="p-6 text-[9px] font-black uppercase text-slate-400 italic text-center">Info</th>
                                                 <th className="p-6 text-[9px] font-black uppercase text-slate-400 italic text-right">Kuantitas</th>
                                             </tr>
                                         </thead>
@@ -419,12 +427,12 @@
                                     setShowModal(null);
                                 }}>
                                     <div className="mb-6">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block italic">Nama Artikel / Barang</label>
-                                        <input name="name" required placeholder="CONTOH: OVERSIZE TEE BLK" className="w-full p-4 bg-slate-100 rounded-2xl font-black text-[10px] uppercase outline-none border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all" />
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block italic">Nama Artikel</label>
+                                        <input name="name" required placeholder="NAMA PRODUK..." className="w-full p-4 bg-slate-100 rounded-2xl font-black text-[10px] uppercase outline-none border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all" />
                                     </div>
                                     <div className="flex gap-2">
                                         <button type="button" onClick={() => setShowModal(null)} className="flex-1 py-4 font-black text-[10px] uppercase text-slate-400 italic">Batal</button>
-                                        <button type="submit" className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-indigo-200 tracking-widest">Simpan Data</button>
+                                        <button type="submit" className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-indigo-200 tracking-widest">Simpan</button>
                                     </div>
                                 </form>
                             </div>
