@@ -6,106 +6,34 @@
     <title>Ritus Street Inventory</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
         .modal-animate { animation: zoomIn 0.2s ease-out; }
         @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .tab-content { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .sidebar-transition { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
         .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         
-        /* Logo Styles */
-        .app-logo {
-            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
-            transition: transform 0.3s ease;
+        .ritus-card { 
+            border-radius: 2.5rem; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .app-logo:hover {
-            transform: scale(1.05) rotate(-2deg);
+        .ritus-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
         }
     </style>
 </head>
 <body class="bg-[#F8FAFC] text-slate-900">
     <div id="root"></div>
 
-    <!-- React Dependencies -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, onSnapshot, addDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        window.FB = { initializeApp, getAuth, signInAnonymously, onAuthStateChanged, getFirestore, collection, doc, setDoc, onSnapshot, addDoc, deleteDoc, query };
-    </script>
-
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // Assets
-        const APP_LOGO_URL = "https://files.oaiusercontent.com/file-K1S77fR0PZ3n32o2M2p2M2p2?se=2024-05-02T08%3A17%3A44Z&sp=r&sv=2021-08-06&sr=b&rscc=max-age%3D31536000%2C%20immutable&rscd=attachment%3B%20filename%3Dimage_2e1d19.png&sig=O25p5TEPSYFL6xmBcS0wZrj_c%3D";
-
-        const firebaseConfig = { 
-            apiKey: "AIzaSyB2xfDX5PU_nP5TEPSYFL6xmBcS0wZrj_c", 
-            authDomain: "ritus-street-inventory.firebaseapp.com", 
-            projectId: "ritus-street-inventory", 
-            storageBucket: "ritus-street-inventory.firebasestorage.app", 
-            messagingSenderId: "249697895281", 
-            appId: "1:1032338604753:web:96e87f17b660c6d649887f" 
-        };
-        const appId = 'ritus-street-v2';
-
-        const InventoryPieChart = ({ apparelCount, aksesorisCount }) => {
-            const chartRef = useRef(null);
-            const chartInstance = useRef(null);
-
-            useEffect(() => {
-                if (chartInstance.current) chartInstance.current.destroy();
-                const ctx = chartRef.current.getContext('2d');
-                chartInstance.current = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Apparel', 'Aksesoris'],
-                        datasets: [{
-                            data: [apparelCount, aksesorisCount],
-                            backgroundColor: ['#6366f1', '#10b981'],
-                            borderColor: ['#ffffff', '#ffffff'],
-                            borderWidth: 4,
-                            hoverOffset: 10
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: { color: '#94a3b8', font: { family: 'Inter', weight: 'bold', size: 10 }, padding: 20, usePointStyle: true }
-                            }
-                        },
-                        cutout: '70%'
-                    }
-                });
-                return () => { if (chartInstance.current) chartInstance.current.destroy(); };
-            }, [apparelCount, aksesorisCount]);
-
-            return (
-                <div className="relative h-64 w-full">
-                    <canvas ref={chartRef}></canvas>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-[10px] font-black uppercase text-slate-500 italic tracking-widest">Total</span>
-                        <span className="text-3xl font-black italic tracking-tighter text-white">{apparelCount + aksesorisCount}</span>
-                    </div>
-                </div>
-            );
-        };
+        const APP_LOGO_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAACXBIWXMAAAsTAAALEwEAmpwYAAAFmElEQVR4nO2dW2hcRRSGv5OkkbRpqhZra2N9Eqq0VfBFfBAUfFDe9KmgfRDUiooPgtIqPlS8tH0RfBF8UfBFUfBBX/qi4osvKl6qIig+pL60mqZpmsZkkuxks9mY7GRzssnZ/v+DwwRyeOf8s2fOnDkHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADpE9wOAX4mI7gcAm6T7AXD7REQPAlUoU8YfAtU4DMT6vO3Z77v6oK/Zp60YAbf0S2fO7vD+9u7v79UfC5M565v6pK9v99oG7083+vIun+7Y382K97n6U8e+uR+S+X29/mR93u1D9vV8H+q+78N9v79D19u/0Ncl68uR9X70eT+73qOve/p6m67H1/vX9Yh6/7p69HVXvR8Z36u66L6v6968H94O3A6u5m76+mB756S/63n/Z3/v6N6S9Xf09bbupz7p9+v9677O09f9fX0gXW/X9XRdX99L1+v1/XVdH7SvC/q6v68Lur9fX+/X98V0v8B+X99T17fS19v39W19H319K33d/X8Z6FmEAg9j6hDmgU9hA6U9gA3AFrAN/AK87e/zFmPqB9A/CgUezA5hHvgm8Bl0Uf8X07H1D+jfhAIPYA6Bv/m7X+E0zAF942Cg9An8GZzAn4EvYA3YA66CD2F8FAo8gDkE/t+I9DnsAf8LPAi8C32D8E36P6DAbYcC8A+h0MscAm8BX9N70f8J6B+FAg9jXNrfv4XpX4Wp77Y9SveG96Z8v6593+T9KdrH6F7VPrH9W9v9vV/H/qZpX7V/e3f/oG7/sPaN/9r/99Y+0B7Vv3W8v878P6F/t7UfaI9oH+reH+rf6e7v+v976H9f+9/v7u8V6W/f7O/+0v+Uf0O/lH/7v6f/Zf9P87fX+4/o39X/E/69pf+H+XfA/9f8m/D/JP/G/F/w/19Y39I+rX3S38f65X0H/t976P/v8P/f6P8/p/8H9P+A/u/378X+PdH/Xf4/9NfB/r/y78T+p/X3W6GvO7q38PZ0of8Z3asYlY/p+gDdm+mH2zsn/V36u0rXf9fX6pY96G+iP8T96p98rL7Zf9WlH63L/pS+7O+W/WnZn6Z9pS76Y/vYF9LHvlQX+6K/q5S62Of66z/93e878L886O/O+6K/hZf9vX1/L36F78W5/6YF8A98An0L+Bb6e6Cvef+39X1097u9X7rYn/Kj+fWlvv0pX76fU5pfc8rXmF+jfn2pX5+v0f9qR686X9/Pq9LXl/P68m6f7773fK86D+n6eO/3+v05fX6976e66e9Hdr/u/9H2Ovt9m8vH8O8D6Vp/5f9K/v0V0eW+/Z1WfX6WfS1W6f7C6P7Ofp90fV79Puh8fX6/875P0+6X5P88/P68uL9vT/R+6f3S/6/of+L7D91f7e9v/p+83+7/T/x/9f/X/O+v777p/pPuv+f/U/X/7/+98rW/6Oqj7h/q6p/tF9/f09YB+H9H9Q7rf/W8z+r9Xv07V35Pr63T6On3dn9fX7U/W1+0O+tp9vbvW/+VvX7T//fW1un0Nfa1uP9DX0NbW/Xn9N9S1t68vun9F9zf09U19fa/779G/pP9P/Vv7f17/Vv+W/mf7X/H/Rf8X/Z/v/9f9K7p/Vvcv+H9m96P+C/r3q/0v6f6f7r+s+5d0f6v779Tf3/T/Yf9S/qW6f6H7X9L9df0/0v8X9F/S/0n/Z/rfVvdfvK6v870v5z6f/76Y+77e9/G853Ofp6+n72Pr67H19dhfXvOez/u+fT69Zz979vL0vFp9Huv78n68D6/N/vKq81f+8qzPr52/UqGzO7y/vfv7e/XHYmXO+qY+6et6/0X9Z/ufrf/p+p8OfA6BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPyP+Q9p9pYyE+pT2QAAAABJRU5ErkJggg==";
 
         function App() {
             const [user, setUser] = useState(null);
@@ -114,422 +42,391 @@
             const [loading, setLoading] = useState(true);
             const [tab, setTab] = useState('dashboard');
             const [categoryFilter, setCategoryFilter] = useState('apparel');
-            const [historyFilter, setHistoryFilter] = useState('all');
             const [searchQuery, setSearchQuery] = useState('');
             const [showModal, setShowModal] = useState(null);
-            const [selectedItem, setSelectedItem] = useState(null);
-            const [selectedSize, setSelectedSize] = useState(null);
             const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-            const [db, setDb] = useState(null);
             const fileInputRef = useRef(null);
+            
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'ritus-street-inventory';
 
             useEffect(() => {
-                const checkFB = setInterval(() => {
-                    if (window.FB) {
-                        clearInterval(checkFB);
-                        const app = window.FB.initializeApp(firebaseConfig);
-                        const fbAuth = window.FB.getAuth(app);
-                        const fbDb = window.FB.getFirestore(app);
-                        setDb(fbDb);
-                        window.FB.signInAnonymously(fbAuth).catch(console.error);
-                        window.FB.onAuthStateChanged(fbAuth, (u) => { if (u) { setUser(u); setLoading(false); } });
+                const init = async () => {
+                    try {
+                        const firebaseConfig = JSON.parse(__firebase_config);
+                        const app = window.Firebase.initializeApp(firebaseConfig);
+                        const auth = window.Firebase.getAuth(app);
+                        
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await window.Firebase.signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await window.Firebase.signInAnonymously(auth);
+                        }
+
+                        window.Firebase.onAuthStateChanged(auth, (u) => {
+                            if (u) {
+                                setUser(u);
+                                setLoading(false);
+                            }
+                        });
+                    } catch (err) {
+                        console.error("Auth Init Error:", err);
                     }
-                }, 100);
+                };
+                init();
             }, []);
 
             useEffect(() => {
-                if (!user || !db) return;
-                const unsubInv = window.FB.onSnapshot(window.FB.collection(db, 'artifacts', appId, 'public', 'data', 'inventory'), (snap) => {
-                    setInventory(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-                });
-                const unsubTrans = window.FB.onSnapshot(window.FB.collection(db, 'artifacts', appId, 'public', 'data', 'transactions'), (snap) => {
-                    const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                if (!user) return;
+                const db = window.Firebase.getFirestore();
+                
+                const invPath = window.Firebase.collection(db, 'artifacts', appId, 'public', 'data', 'inventory');
+                const transPath = window.Firebase.collection(db, 'artifacts', appId, 'public', 'data', 'transactions');
+
+                const unsubInv = window.Firebase.onSnapshot(invPath, (snap) => {
+                    const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    setInventory(data);
+                }, (err) => console.error("Firestore Error:", err));
+
+                const unsubTrans = window.Firebase.onSnapshot(transPath, (snap) => {
+                    const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     setTransactions(data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
-                });
+                }, (err) => console.error("Firestore Error:", err));
+
                 return () => { unsubInv(); unsubTrans(); };
-            }, [user, db]);
+            }, [user]);
 
-            useEffect(() => { if(window.lucide) window.lucide.createIcons(); }, [tab, inventory, isSidebarOpen, categoryFilter, searchQuery, historyFilter]);
+            useEffect(() => { if(window.lucide) window.lucide.createIcons(); }, [tab, inventory, isSidebarOpen, categoryFilter, searchQuery]);
 
-            const stats = {
-                totalItems: inventory.length,
-                totalStock: inventory.reduce((acc, item) => {
-                    if(item.category === 'apparel') return acc + Object.values(item.sizes || {}).reduce((a, b) => a + b, 0);
-                    return acc + (item.stock || 0);
-                }, 0),
-                lowStockItems: inventory.filter(item => {
-                    if(item.category === 'aksesoris') return (item.stock || 0) <= (item.minStock || 5);
-                    return Object.values(item.sizes || {}).some(s => s <= 2);
-                }),
-                apparelCount: inventory.filter(i => i.category === 'apparel').length,
-                aksesorisCount: inventory.filter(i => i.category === 'aksesoris').length
-            };
-
-            const processTransaction = async (item, size, amount, type, customTime = null) => {
+            const handleUpdateStock = async (item, size, change, type) => {
+                const db = window.Firebase.getFirestore();
+                const docRef = window.Firebase.doc(db, 'artifacts', appId, 'public', 'data', 'inventory', item.id);
+                
                 let updatedData = { ...item };
-                const timestamp = customTime || new Date().toISOString();
                 if (item.category === 'apparel') {
-                    const currentStock = item.sizes[size] || 0;
-                    const newStock = type === 'in' ? currentStock + amount : currentStock - amount;
-                    if (newStock < 0) return false;
-                    updatedData.sizes[size] = newStock;
+                    if (!updatedData.sizes) updatedData.sizes = { S: 0, M: 0, L: 0, XL: 0 };
+                    updatedData.sizes[size] = Math.max(0, (updatedData.sizes[size] || 0) + change);
                 } else {
-                    const newStock = type === 'in' ? item.stock + amount : item.stock - amount;
-                    if (newStock < 0) return false;
-                    updatedData.stock = newStock;
+                    updatedData.stock = Math.max(0, (updatedData.stock || 0) + change);
                 }
-                await window.FB.setDoc(window.FB.doc(db, 'artifacts', appId, 'public', 'data', 'inventory', item.id), updatedData, { merge: true });
-                await window.FB.addDoc(window.FB.collection(db, 'artifacts', appId, 'public', 'data', 'transactions'), {
-                    itemName: item.name, 
-                    info: item.category === 'apparel' ? size : (item.location || '-'),
-                    type, amount, timestamp
-                });
-                return true;
+
+                try {
+                    await window.Firebase.setDoc(docRef, updatedData);
+                    await window.Firebase.addDoc(window.Firebase.collection(db, 'artifacts', appId, 'public', 'data', 'transactions'), {
+                        itemName: item.name,
+                        itemCategory: item.category,
+                        info: size || 'Unit',
+                        type,
+                        amount: Math.abs(change),
+                        timestamp: new Date().toISOString(),
+                        userId: user.uid
+                    });
+                } catch (e) {
+                    console.error("Update failed:", e);
+                }
             };
 
-            const handleCSVUpload = (e) => {
+            const handleFileUpload = (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
+
                 const reader = new FileReader();
                 reader.onload = async (event) => {
                     const text = event.target.result;
-                    const rows = text.split('\n').filter(row => row.trim() !== '');
-                    const dataRows = rows.slice(1);
-                    for (let row of dataRows) {
-                        const [name, info, type, amountStr, timeStr] = row.split(',').map(s => s?.trim());
-                        const amount = parseInt(amountStr);
-                        if (!name || !type || isNaN(amount)) continue;
-                        const item = inventory.find(i => i.name.toLowerCase() === name.toLowerCase());
-                        if (item) {
-                            const sizeVal = (item.category === 'apparel') ? info.toUpperCase() : null;
-                            const customTime = timeStr ? new Date(timeStr).toISOString() : null;
-                            const finalTime = (customTime && customTime !== 'Invalid Date') ? customTime : new Date().toISOString();
-                            await processTransaction(item, sizeVal, amount, type.toLowerCase(), finalTime);
+                    const lines = text.split('\n').filter(line => line.trim() !== '');
+                    const db = window.Firebase.getFirestore();
+                    
+                    // Lewati header (Nama;Info;Jenis;Tipe;Jumlah;Waktu)
+                    for (let i = 1; i < lines.length; i++) {
+                        const parts = lines[i].split(';');
+                        if (parts.length < 5) continue;
+
+                        const [name, info, categoryRaw, typeRaw, amountStr] = parts;
+                        const category = categoryRaw.toLowerCase().includes('apparel') ? 'apparel' : 'aksesoris';
+                        const type = typeRaw.toLowerCase() === 'in' ? 'in' : 'out';
+                        const amount = parseInt(amountStr) || 0;
+
+                        // Cari apakah item sudah ada
+                        let existingItem = inventory.find(item => item.name.trim().toLowerCase() === name.trim().toLowerCase());
+
+                        if (existingItem) {
+                            // Update yang ada
+                            const change = type === 'in' ? amount : -amount;
+                            await handleUpdateStock(existingItem, category === 'apparel' ? info.trim() : null, change, type);
+                        } else {
+                            // Buat baru
+                            const newItem = {
+                                name: name.trim(),
+                                category: category,
+                                createdAt: new Date().toISOString()
+                            };
+                            if (category === 'apparel') {
+                                newItem.sizes = { S: 0, M: 0, L: 0, XL: 0 };
+                                newItem.sizes[info.trim()] = amount;
+                            } else {
+                                newItem.stock = amount;
+                            }
+                            
+                            const docRef = await window.Firebase.addDoc(window.Firebase.collection(db, 'artifacts', appId, 'public', 'data', 'inventory'), newItem);
+                            
+                            // Tambah log awal
+                            await window.Firebase.addDoc(window.Firebase.collection(db, 'artifacts', appId, 'public', 'data', 'transactions'), {
+                                itemName: newItem.name,
+                                itemCategory: newItem.category,
+                                info: category === 'apparel' ? info.trim() : 'Unit',
+                                type: 'in',
+                                amount: amount,
+                                timestamp: new Date().toISOString(),
+                                userId: user.uid
+                            });
                         }
                     }
-                    e.target.value = null;
                 };
                 reader.readAsText(file);
             };
 
-            const filteredHistory = transactions.filter(t => {
-                const matchesSearch = t.itemName.toLowerCase().includes(searchQuery.toLowerCase());
-                const matchesFilter = historyFilter === 'all' || t.type === historyFilter;
-                return matchesSearch && matchesFilter;
-            });
+            const stats = {
+                totalItems: inventory.length,
+                totalStock: inventory.reduce((acc, i) => {
+                    if(i.category === 'apparel') return acc + Object.values(i.sizes || {}).reduce((a, b) => a + b, 0);
+                    return acc + (i.stock || 0);
+                }, 0),
+                lowStock: inventory.filter(i => {
+                    if(i.category === 'aksesoris') return (i.stock || 0) < 5;
+                    return Object.values(i.sizes || {}).some(v => v < 2);
+                }).length
+            };
 
             if (loading) return (
                 <div className="h-screen flex flex-col items-center justify-center bg-slate-900 text-white">
-                    <img src={APP_LOGO_URL} className="w-20 h-20 mb-6 animate-pulse" alt="Ritus Logo" />
-                    <p className="font-black uppercase tracking-[0.3em] text-[10px]">Memuat Data Ritus...</p>
+                    <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em]">Ritus Loading...</p>
                 </div>
             );
 
             return (
-                <div className="min-h-screen">
+                <div className="min-h-screen pb-20">
+                    <input type="file" accept=".csv" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
+
                     {/* SIDEBAR */}
-                    <div className={`fixed inset-y-0 left-0 w-72 bg-[#0F172A] text-white z-[150] sidebar-transition transform ${isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'} flex flex-col`}>
-                        <div className="p-8 border-b border-slate-800/50 flex flex-col items-center">
-                            <div className="flex items-center gap-4 mb-2">
-                                <img src={APP_LOGO_URL} className="w-14 h-14 app-logo" alt="Ritus Street Logo" />
-                                <div>
-                                    <h1 className="font-black italic uppercase tracking-tighter text-2xl leading-none">RITUS</h1>
-                                    <span className="text-[9px] font-bold text-slate-500 tracking-[0.2em] uppercase">Inventory V2</span>
-                                </div>
+                    <div className={`fixed inset-y-0 left-0 w-72 bg-[#0F172A] text-white z-[150] transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                        <div className="p-8 border-b border-white/5 flex items-center gap-4">
+                            <img src={APP_LOGO_BASE64} className="w-10 h-10" />
+                            <div>
+                                <h1 className="font-black italic text-xl leading-none">RITUS</h1>
+                                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Inventory System</p>
                             </div>
                         </div>
-                        
-                        <nav className="p-6 space-y-2 flex-1">
-                            <button onClick={() => {setTab('dashboard'); setIsSidebarOpen(false)}} className={`w-full flex items-center gap-4 p-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all ${tab === 'dashboard' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20' : 'text-slate-400 hover:bg-slate-800/50'}`}>
-                                <i data-lucide="layout-grid" size="18"></i> Dashboard
-                            </button>
-                            <button onClick={() => {setTab('inventory'); setIsSidebarOpen(false)}} className={`w-full flex items-center gap-4 p-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all ${tab === 'inventory' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20' : 'text-slate-400 hover:bg-slate-800/50'}`}>
-                                <i data-lucide="package" size="18"></i> Manajemen Stok
-                            </button>
-                            <button onClick={() => {setTab('history'); setIsSidebarOpen(false)}} className={`w-full flex items-center gap-4 p-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all ${tab === 'history' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20' : 'text-slate-400 hover:bg-slate-800/50'}`}>
-                                <i data-lucide="scroll-text" size="18"></i> Riwayat Transaksi
-                            </button>
+                        <nav className="p-6 space-y-2">
+                            {[
+                                { id: 'dashboard', label: 'Dashboard', icon: 'layout' },
+                                { id: 'inventory', label: 'Stok Barang', icon: 'package' },
+                                { id: 'history', label: 'Riwayat', icon: 'history' }
+                            ].map(t => (
+                                <button key={t.id} onClick={() => {setTab(t.id); setIsSidebarOpen(false)}} className={`w-full text-left p-4 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 transition-all ${tab === t.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
+                                    <i data-lucide={t.icon} size="16"></i>
+                                    {t.label}
+                                </button>
+                            ))}
                         </nav>
-
-                        <div className="p-6 border-t border-slate-800/50">
-                            <button onClick={() => fileInputRef.current.click()} className="w-full flex items-center justify-center gap-3 p-4 bg-slate-800/50 border border-slate-700 rounded-2xl text-slate-400 hover:text-white hover:border-indigo-500 transition-all font-black text-[9px] uppercase tracking-widest">
-                                <i data-lucide="file-up" size="16"></i> Impor CSV
+                        <div className="absolute bottom-8 left-0 w-full px-6">
+                            <button onClick={() => fileInputRef.current.click()} className="w-full flex items-center justify-center gap-2 p-4 bg-slate-800 hover:bg-indigo-500 rounded-2xl text-[10px] font-black uppercase transition-all tracking-widest">
+                                <i data-lucide="upload" size="14"></i> Import CSV
                             </button>
-                            <input type="file" ref={fileInputRef} onChange={handleCSVUpload} accept=".csv" className="hidden" />
                         </div>
                     </div>
 
-                    {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[140]"></div>}
+                    {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[140]"></div>}
 
-                    {/* TOP NAVBAR */}
-                    <nav className="glass-card h-20 px-6 flex items-center justify-between sticky top-0 z-50">
+                    {/* HEADER */}
+                    <header className="glass-card h-20 px-6 flex items-center justify-between sticky top-0 z-50">
                         <div className="flex items-center gap-4">
-                            <button onClick={() => setIsSidebarOpen(true)} className="w-12 h-12 flex items-center justify-center bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all shadow-sm"><i data-lucide="menu" size="20"></i></button>
-                            <div className="flex items-center gap-3">
-                                <img src={APP_LOGO_URL} className="w-8 h-8 md:hidden" alt="Logo" />
-                                <h2 className="font-black italic uppercase tracking-tighter text-xl text-slate-800">{tab === 'dashboard' ? 'Overview' : tab === 'inventory' ? 'Inventory' : 'Riwayat'}</h2>
-                            </div>
+                            <button onClick={() => setIsSidebarOpen(true)} className="p-3 bg-white border rounded-xl shadow-sm"><i data-lucide="menu" size="20"></i></button>
+                            <h2 className="font-black italic uppercase text-lg tracking-tighter">{tab}</h2>
                         </div>
-                        <div className="flex items-center gap-4">
-                            <div className="relative hidden md:block w-64">
-                                <i data-lucide="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size="14"></i>
-                                <input 
-                                    type="text" 
-                                    placeholder="CARI DATA..." 
-                                    className="w-full pl-10 pr-4 py-2.5 bg-slate-100 border-none rounded-xl font-bold uppercase text-[10px] tracking-widest outline-none focus:ring-2 ring-indigo-500/10"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                            </div>
+                        <div className="relative w-48 md:w-64">
+                            <i data-lucide="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size="14"></i>
+                            <input 
+                                type="text" placeholder="CARI ARTIKEL..." 
+                                className="w-full pl-9 pr-4 py-2 bg-slate-100 border-none rounded-xl text-[10px] font-bold uppercase outline-none focus:ring-2 ring-indigo-500/20"
+                                value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                            />
                         </div>
-                    </nav>
+                    </header>
 
-                    <main className="max-w-6xl mx-auto p-6 tab-content">
+                    <main className="max-w-6xl mx-auto p-6 mt-4">
                         {tab === 'dashboard' && (
-                            <div className="space-y-8">
+                            <div className="space-y-8 animate-in fade-in duration-500">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6"><i data-lucide="package-search" size="24"></i></div>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase italic">Varian Produk</p>
-                                        <h3 className="text-5xl font-black italic tracking-tighter">{stats.totalItems}</h3>
-                                    </div>
-                                    <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                                        <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-6"><i data-lucide="boxes" size="24"></i></div>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase italic">Stok Fisik</p>
-                                        <h3 className="text-5xl font-black italic tracking-tighter">{stats.totalStock}</h3>
-                                    </div>
-                                    <div className={`p-8 rounded-[2.5rem] border shadow-sm transition-all ${stats.lowStockItems.length > 0 ? 'bg-rose-50 border-rose-200' : 'bg-white border-slate-200'}`}>
-                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 ${stats.lowStockItems.length > 0 ? 'bg-rose-500 text-white shadow-lg shadow-rose-200' : 'bg-slate-100 text-slate-400'}`}><i data-lucide="alert-circle" size="24"></i></div>
-                                        <p className={`text-[10px] font-black uppercase italic ${stats.lowStockItems.length > 0 ? 'text-rose-600' : 'text-slate-400'}`}>Stok Menipis</p>
-                                        <h3 className={`text-5xl font-black italic tracking-tighter ${stats.lowStockItems.length > 0 ? 'text-rose-700' : 'text-slate-800'}`}>{stats.lowStockItems.length}</h3>
-                                    </div>
+                                    {[
+                                        { label: 'Total Artikel', val: stats.totalItems, color: 'text-slate-900' },
+                                        { label: 'Stok Terhitung', val: stats.totalStock, color: 'text-indigo-600' },
+                                        { label: 'Stok Menipis', val: stats.lowStock, color: 'text-rose-500' }
+                                    ].map((s, idx) => (
+                                        <div key={idx} className="bg-white p-8 ritus-card border shadow-sm">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase italic mb-1">{s.label}</p>
+                                            <h3 className={`text-5xl font-black italic tracking-tighter ${s.color}`}>{s.val}</h3>
+                                        </div>
+                                    ))}
                                 </div>
 
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    <div className="bg-[#0F172A] text-white p-8 rounded-[3rem] shadow-2xl flex flex-col items-center">
-                                        <h4 className="w-full font-black italic uppercase text-lg mb-8 tracking-tighter flex items-center gap-3">
-                                            <i data-lucide="pie-chart" size="20" className="text-indigo-400"></i> Distribusi Kategori
-                                        </h4>
-                                        <div className="w-full max-w-[300px]">
-                                            <InventoryPieChart apparelCount={stats.apparelCount} aksesorisCount={stats.aksesorisCount} />
-                                        </div>
-                                        <div className="mt-8 grid grid-cols-2 gap-6 w-full">
-                                            <div className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10">
-                                                <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
-                                                <div>
-                                                    <p className="text-[9px] font-black text-slate-500 uppercase italic">Apparel</p>
-                                                    <p className="text-sm font-black uppercase italic">{stats.apparelCount} Artikel</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10">
-                                                <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                                                <div>
-                                                    <p className="text-[9px] font-black text-slate-500 uppercase italic">Aksesoris</p>
-                                                    <p className="text-sm font-black uppercase italic">{stats.aksesorisCount} Artikel</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm">
-                                        <div className="flex justify-between items-center mb-8">
-                                            <h4 className="font-black italic uppercase text-lg tracking-tighter">Aktivitas Terakhir</h4>
-                                            <button onClick={() => setTab('history')} className="text-[10px] font-black uppercase italic text-indigo-600 hover:underline">Semua</button>
-                                        </div>
-                                        <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
-                                            {transactions.slice(0, 5).map(t => (
-                                                <div key={t.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.type === 'in' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
-                                                            <i data-lucide={t.type === 'in' ? 'arrow-down-left' : 'arrow-up-right'} size="16"></i>
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-black text-[11px] uppercase italic leading-tight">{t.itemName}</p>
-                                                            <p className="text-[8px] font-bold text-slate-400 uppercase italic">{t.info}</p>
-                                                        </div>
+                                <div className="bg-white p-8 ritus-card border shadow-sm">
+                                    <h4 className="font-black italic uppercase text-sm mb-6 flex items-center gap-2"><i data-lucide="activity" size="16"></i> Aktivitas Terakhir</h4>
+                                    <div className="space-y-3">
+                                        {transactions.slice(0, 5).map(t => (
+                                            <div key={t.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${t.type === 'in' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                                                        <i data-lucide={t.type === 'in' ? 'plus' : 'minus'} size="14"></i>
                                                     </div>
-                                                    <p className={`font-black italic text-lg tracking-tighter ${t.type === 'in' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                                        {t.type === 'in' ? '+' : '-'}{t.amount}
-                                                    </p>
+                                                    <div>
+                                                        <p className="font-black text-[10px] uppercase italic">{t.itemName}</p>
+                                                        <p className="text-[8px] font-bold text-slate-400 uppercase">{t.info} • {new Date(t.timestamp).toLocaleTimeString()}</p>
+                                                    </div>
                                                 </div>
-                                            ))}
-                                        </div>
+                                                <p className={`font-black italic text-lg ${t.type === 'in' ? 'text-emerald-500' : 'text-rose-500'}`}>{t.type === 'in' ? '+' : '-'}{t.amount}</p>
+                                            </div>
+                                        ))}
+                                        {transactions.length === 0 && <p className="text-center py-10 text-[10px] font-bold text-slate-400 uppercase italic">Belum ada riwayat aktivitas</p>}
                                     </div>
                                 </div>
                             </div>
                         )}
 
                         {tab === 'inventory' && (
-                            <>
-                                <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
-                                    <div className="flex bg-white p-1.5 rounded-3xl border border-slate-200 shadow-sm w-full md:w-auto">
-                                        <button onClick={() => setCategoryFilter('apparel')} className={`flex-1 md:flex-none px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${categoryFilter === 'apparel' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}>Apparel</button>
-                                        <button onClick={() => setCategoryFilter('aksesoris')} className={`flex-1 md:flex-none px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${categoryFilter === 'aksesoris' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400'}`}>Aksesoris</button>
+                            <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+                                <div className="flex flex-wrap justify-between items-center gap-4">
+                                    <div className="flex bg-white p-1 rounded-2xl border shadow-sm">
+                                        <button onClick={() => setCategoryFilter('apparel')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${categoryFilter === 'apparel' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-400'}`}>Apparel</button>
+                                        <button onClick={() => setCategoryFilter('aksesoris')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${categoryFilter === 'aksesoris' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-400'}`}>Aksesoris</button>
                                     </div>
-                                    <button onClick={() => setShowModal('add')} className="w-full md:w-auto bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-500/20">
-                                        <i data-lucide="plus" size="16"></i> Tambah {categoryFilter}
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => fileInputRef.current.click()} className="bg-white border px-4 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2">
+                                            <i data-lucide="file-text" size="14"></i> Import CSV
+                                        </button>
+                                        <button onClick={() => setShowModal('add')} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-200 flex items-center gap-2">
+                                            <i data-lucide="plus-circle" size="14"></i> Tambah Artikel
+                                        </button>
+                                    </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {inventory.filter(i => i.category === categoryFilter && i.name.toLowerCase().includes(searchQuery.toLowerCase())).map(item => (
-                                        <div key={item.id} className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm relative group transition-all hover:border-indigo-400">
+                                        <div key={item.id} className="bg-white p-6 ritus-card border shadow-sm">
                                             <div className="flex justify-between items-start mb-6">
                                                 <div>
-                                                    <h3 className="font-black italic uppercase text-xl leading-tight tracking-tighter text-slate-800">{item.name}</h3>
-                                                    <span className="text-[8px] font-black uppercase text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full mt-1 inline-block">{item.location || 'Rak Umum'}</span>
+                                                    <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest">ARTIKEL</span>
+                                                    <h3 className="font-black italic uppercase text-lg tracking-tighter leading-none">{item.name}</h3>
                                                 </div>
-                                                <button onClick={async () => {if(confirm("Hapus artikel ini?")) await window.FB.deleteDoc(window.FB.doc(db, 'artifacts', appId, 'public', 'data', 'inventory', item.id))}} className="p-2 text-slate-200 hover:text-rose-500 transition-colors">
-                                                    <i data-lucide="trash-2" size="16"></i>
-                                                </button>
+                                                <button onClick={async () => {if(confirm('Hapus artikel ini?')) await window.Firebase.deleteDoc(window.Firebase.doc(window.Firebase.getFirestore(), 'artifacts', appId, 'public', 'data', 'inventory', item.id))}} className="text-slate-200 hover:text-rose-500 transition-colors p-2"><i data-lucide="trash-2" size="14"></i></button>
                                             </div>
 
                                             {item.category === 'apparel' ? (
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    {Object.entries(item.sizes || {}).map(([size, stock]) => (
-                                                        <div key={size} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex justify-between items-center group/size hover:bg-white hover:shadow-md transition-all">
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    {['S', 'M', 'L', 'XL'].map(sz => (
+                                                        <div key={sz} className="bg-slate-50 p-3 rounded-2xl flex justify-between items-center border border-transparent hover:border-slate-200 transition-all">
                                                             <div>
-                                                                <p className="text-[9px] font-black text-slate-400 uppercase italic mb-1">{size}</p>
-                                                                <p className={`text-2xl font-black italic ${stock <= 2 ? 'text-rose-500' : 'text-slate-800'}`}>{stock}</p>
+                                                                <p className="text-[8px] font-black text-slate-400 uppercase leading-none mb-1">{sz}</p>
+                                                                <p className="text-xl font-black italic">{item.sizes?.[sz] || 0}</p>
                                                             </div>
-                                                            <div className="flex flex-col gap-1 opacity-0 group-hover/size:opacity-100 transition-opacity">
-                                                                <button onClick={() => {setSelectedItem(item); setSelectedSize(size); setShowModal('in');}} className="p-1.5 bg-emerald-500 text-white rounded-lg"><i data-lucide="plus" size="12"></i></button>
-                                                                <button onClick={() => {setSelectedItem(item); setSelectedSize(size); setShowModal('out');}} className="p-1.5 bg-rose-500 text-white rounded-lg"><i data-lucide="minus" size="12"></i></button>
+                                                            <div className="flex flex-col gap-1">
+                                                                <button onClick={() => handleUpdateStock(item, sz, 1, 'in')} className="p-1 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"><i data-lucide="plus" size="12"></i></button>
+                                                                <button onClick={() => handleUpdateStock(item, sz, -1, 'out')} className="p-1 bg-rose-500 text-white rounded-lg hover:bg-rose-600"><i data-lucide="minus" size="12"></i></button>
                                                             </div>
                                                         </div>
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <div className="flex justify-between items-end">
+                                                <div className="flex justify-between items-end bg-slate-50 p-4 rounded-2xl">
                                                     <div>
-                                                        <p className="text-[10px] font-black text-slate-400 uppercase italic mb-1">Stok Unit</p>
-                                                        <p className="text-6xl font-black italic tracking-tighter leading-none">{item.stock}</p>
+                                                        <p className="text-[8px] font-black text-slate-400 uppercase mb-1">STOK UNIT</p>
+                                                        <p className="text-5xl font-black italic tracking-tighter">{item.stock || 0}</p>
                                                     </div>
                                                     <div className="flex gap-2">
-                                                        <button onClick={() => {setSelectedItem(item); setShowModal('in');}} className="w-12 h-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20"><i data-lucide="plus" size="20"></i></button>
-                                                        <button onClick={() => {setSelectedItem(item); setShowModal('out');}} className="w-12 h-12 bg-rose-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-rose-500/20"><i data-lucide="minus" size="20"></i></button>
+                                                        <button onClick={() => handleUpdateStock(item, null, 1, 'in')} className="w-12 h-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center hover:bg-emerald-600 shadow-md"><i data-lucide="plus" size="20"></i></button>
+                                                        <button onClick={() => handleUpdateStock(item, null, -1, 'out')} className="w-12 h-12 bg-rose-500 text-white rounded-2xl flex items-center justify-center hover:bg-rose-600 shadow-md"><i data-lucide="minus" size="20"></i></button>
                                                     </div>
                                                 </div>
                                             )}
                                         </div>
                                     ))}
                                 </div>
-                            </>
+                            </div>
                         )}
-                        
-                        {tab === 'history' && (
-                            <div className="space-y-6">
-                                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                                    <div className="flex bg-white p-1.5 rounded-3xl border border-slate-200 shadow-sm w-full md:w-auto">
-                                        <button onClick={() => setHistoryFilter('all')} className={`flex-1 px-6 py-2.5 rounded-2xl font-black text-[9px] uppercase tracking-widest ${historyFilter === 'all' ? 'bg-slate-900 text-white' : 'text-slate-400'}`}>Semua</button>
-                                        <button onClick={() => setHistoryFilter('in')} className={`flex-1 px-6 py-2.5 rounded-2xl font-black text-[9px] uppercase tracking-widest ${historyFilter === 'in' ? 'bg-emerald-500 text-white' : 'text-slate-400'}`}>Masuk</button>
-                                        <button onClick={() => setHistoryFilter('out')} className={`flex-1 px-6 py-2.5 rounded-2xl font-black text-[9px] uppercase tracking-widest ${historyFilter === 'out' ? 'bg-rose-500 text-white' : 'text-slate-400'}`}>Keluar</button>
-                                    </div>
-                                    <p className="text-[10px] font-black uppercase text-slate-400 italic">Menampilkan {filteredHistory.length} Transaksi</p>
-                                </div>
 
-                                <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden">
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-left border-collapse">
-                                            <thead>
-                                                <tr className="bg-slate-50/50 border-b border-slate-100">
-                                                    <th className="p-6 text-[10px] font-black uppercase italic text-slate-400 tracking-widest">Waktu & Tanggal</th>
-                                                    <th className="p-6 text-[10px] font-black uppercase italic text-slate-400 tracking-widest">Artikel</th>
-                                                    <th className="p-6 text-[10px] font-black uppercase italic text-slate-400 tracking-widest">Detail</th>
-                                                    <th className="p-6 text-[10px] font-black uppercase italic text-slate-400 tracking-widest text-center">Tipe</th>
-                                                    <th className="p-6 text-[10px] font-black uppercase italic text-slate-400 tracking-widest text-right">Jumlah</th>
+                        {tab === 'history' && (
+                            <div className="bg-white ritus-card border shadow-sm overflow-hidden animate-in fade-in duration-500">
+                                <div className="p-6 border-b bg-slate-50 flex justify-between items-center">
+                                    <h4 className="font-black italic uppercase text-sm">Log Transaksi</h4>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{transactions.length} Entri</p>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead className="border-b">
+                                            <tr>
+                                                <th className="p-6 text-[9px] font-black uppercase text-slate-400 italic">Tanggal & Waktu</th>
+                                                <th className="p-6 text-[9px] font-black uppercase text-slate-400 italic">Produk</th>
+                                                <th className="p-6 text-[9px] font-black uppercase text-slate-400 italic text-center">Detail</th>
+                                                <th className="p-6 text-[9px] font-black uppercase text-slate-400 italic text-right">Kuantitas</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {transactions.filter(t => t.itemName.toLowerCase().includes(searchQuery.toLowerCase())).map(t => (
+                                                <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
+                                                    <td className="p-6">
+                                                        <p className="text-[10px] font-bold text-slate-900">{new Date(t.timestamp).toLocaleDateString()}</p>
+                                                        <p className="text-[9px] font-bold text-slate-400">{new Date(t.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                                    </td>
+                                                    <td className="p-6">
+                                                        <p className="font-black text-xs uppercase italic">{t.itemName}</p>
+                                                        <p className="text-[8px] font-black text-indigo-400 uppercase tracking-tighter">{t.itemCategory}</p>
+                                                    </td>
+                                                    <td className="p-6 text-center">
+                                                        <span className="px-3 py-1 bg-slate-100 rounded-full text-[9px] font-black uppercase italic text-slate-500">{t.info}</span>
+                                                    </td>
+                                                    <td className={`p-6 text-right font-black italic text-xl ${t.type === 'in' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                        {t.type === 'in' ? '+' : '-'}{t.amount}
+                                                    </td>
                                                 </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-50">
-                                                {filteredHistory.map(t => (
-                                                    <tr key={t.id} className="hover:bg-slate-50/30 transition-colors">
-                                                        <td className="p-6">
-                                                            <div className="flex items-center gap-3 text-slate-400">
-                                                                <i data-lucide="clock" size="14"></i>
-                                                                <span className="text-[11px] font-bold">{new Date(t.timestamp).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="p-6">
-                                                            <p className="font-black text-xs uppercase italic tracking-tight">{t.itemName}</p>
-                                                        </td>
-                                                        <td className="p-6">
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase italic bg-slate-100 px-2 py-1 rounded-lg">{t.info}</span>
-                                                        </td>
-                                                        <td className="p-6 text-center">
-                                                            <span className={`px-4 py-1.5 rounded-full text-[9px] font-black italic tracking-widest ${t.type === 'in' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
-                                                                {t.type === 'in' ? 'MASUK' : 'KELUAR'}
-                                                            </span>
-                                                        </td>
-                                                        <td className={`p-6 text-right font-black italic text-xl tracking-tighter ${t.type === 'in' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                                            {t.type === 'in' ? '+' : '-'}{t.amount}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         )}
                     </main>
 
-                    {/* MODAL SYSTEM */}
-                    {showModal && (
-                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-                            <div className="bg-white rounded-[3rem] w-full max-w-sm p-10 modal-animate shadow-2xl relative">
-                                <button onClick={() => setShowModal(null)} className="absolute right-8 top-8 text-slate-300 hover:text-slate-900"><i data-lucide="x" size="24"></i></button>
-                                {showModal === 'add' ? (
-                                    <form onSubmit={async (e) => {
-                                        e.preventDefault();
-                                        const name = e.target.name.value;
-                                        if (categoryFilter === 'apparel') {
-                                            const sizes = { S: parseInt(e.target.s.value || 0), M: parseInt(e.target.m.value || 0), L: parseInt(e.target.l.value || 0), XL: parseInt(e.target.xl.value || 0) };
-                                            await window.FB.addDoc(window.FB.collection(db, 'artifacts', appId, 'public', 'data', 'inventory'), { name, category: 'apparel', sizes, createdAt: new Date().toISOString() });
-                                        } else {
-                                            await window.FB.addDoc(window.FB.collection(db, 'artifacts', appId, 'public', 'data', 'inventory'), { 
-                                                name, category: 'aksesoris', 
-                                                stock: parseInt(e.target.stock.value || 0), 
-                                                minStock: parseInt(e.target.minStock.value || 5),
-                                                location: e.target.location.value || 'Rak Utama',
-                                                createdAt: new Date().toISOString() 
-                                            });
-                                        }
-                                        setShowModal(null);
-                                    }}>
-                                        <h2 className="text-2xl font-black italic uppercase mb-8 tracking-tighter">Tambah {categoryFilter}</h2>
-                                        <div className="space-y-4">
-                                            <input name="name" placeholder="NAMA PRODUK" required className="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 font-bold uppercase text-xs outline-none focus:ring-2 ring-indigo-500/20" />
-                                            {categoryFilter === 'apparel' ? (
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    {['S', 'M', 'L', 'XL'].map(s => (
-                                                        <div key={s}><label className="text-[8px] font-black uppercase text-slate-400 ml-2">Size {s}</label><input name={s.toLowerCase()} type="number" defaultValue="0" className="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 font-bold text-xs" /></div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <div className="space-y-4">
-                                                    <div><label className="text-[8px] font-black uppercase text-slate-400 ml-2">Stok Awal</label><input name="stock" type="number" defaultValue="0" className="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 font-bold text-xs" /></div>
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        <div><label className="text-[8px] font-black uppercase text-slate-400 ml-2">Limit Kritis</label><input name="minStock" type="number" defaultValue="5" className="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 font-bold text-xs" /></div>
-                                                        <div><label className="text-[8px] font-black uppercase text-slate-400 ml-2">Lokasi Rak</label><input name="location" placeholder="Rak A1" className="w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 font-bold text-xs uppercase" /></div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                            <button type="submit" className="w-full py-5 bg-indigo-600 text-white font-black rounded-2xl uppercase italic tracking-widest text-[10px] shadow-xl mt-4">Simpan Produk</button>
-                                        </div>
-                                    </form>
-                                ) : (
-                                    <form onSubmit={async (e) => {
-                                        e.preventDefault();
-                                        const amount = parseInt(e.target.amount.value);
-                                        await processTransaction(selectedItem, selectedSize, amount, showModal);
-                                        setShowModal(null);
-                                    }} className="text-center">
-                                        <h2 className={`text-2xl font-black italic uppercase mb-2 ${showModal === 'in' ? 'text-emerald-500' : 'text-rose-500'}`}>{showModal === 'in' ? 'Stok Masuk' : 'Stok Keluar'}</h2>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase italic mb-8">{selectedItem?.name} {selectedSize && `(${selectedSize})`}</p>
-                                        <input name="amount" type="number" required min="1" autoFocus placeholder="0" className="w-full text-center text-8xl font-black italic bg-transparent outline-none mb-10 tracking-tighter" />
-                                        <button type="submit" className={`w-full py-5 text-white font-black rounded-2xl uppercase italic tracking-widest text-[10px] shadow-xl ${showModal === 'in' ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-rose-500 shadow-rose-500/20'}`}>Konfirmasi Database</button>
-                                    </form>
-                                )}
+                    {/* MODAL ADD */}
+                    {showModal === 'add' && (
+                        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+                            <div className="bg-white rounded-[2.5rem] w-full max-w-sm p-8 modal-animate shadow-2xl">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-xl font-black italic uppercase tracking-tighter">New {categoryFilter}</h2>
+                                    <button onClick={() => setShowModal(null)} className="text-slate-300 hover:text-slate-900"><i data-lucide="x" size="20"></i></button>
+                                </div>
+                                <form onSubmit={async e => {
+                                    e.preventDefault();
+                                    const name = e.target.name.value;
+                                    const db = window.Firebase.getFirestore();
+                                    const data = {
+                                        name,
+                                        category: categoryFilter,
+                                        createdAt: new Date().toISOString()
+                                    };
+                                    if(categoryFilter === 'apparel') data.sizes = { S: 0, M: 0, L: 0, XL: 0 };
+                                    else data.stock = 0;
+
+                                    await window.Firebase.addDoc(window.Firebase.collection(db, 'artifacts', appId, 'public', 'data', 'inventory'), data);
+                                    setShowModal(null);
+                                }}>
+                                    <div className="mb-6">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block italic">Nama Artikel / Barang</label>
+                                        <input name="name" required placeholder="CONTOH: OVERSIZE TEE BLK" className="w-full p-4 bg-slate-100 rounded-2xl font-black text-[10px] uppercase outline-none border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all" />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button type="button" onClick={() => setShowModal(null)} className="flex-1 py-4 font-black text-[10px] uppercase text-slate-400 italic">Batal</button>
+                                        <button type="submit" className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-indigo-200 tracking-widest">Simpan Data</button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                     )}
@@ -539,6 +436,13 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+    </script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, addDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        window.Firebase = { initializeApp, getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken, getFirestore, collection, doc, setDoc, onSnapshot, addDoc, deleteDoc, query };
     </script>
 </body>
 </html>
