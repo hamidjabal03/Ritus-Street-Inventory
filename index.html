@@ -8,26 +8,75 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
-        .modal-animate { animation: zoomIn 0.2s ease-out; }
-        @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); }
         
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #F8FAFC;
+            color: #0F172A;
+        }
+
         .ritus-card { 
             border-radius: 2.5rem; 
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(0,0,0,0.05);
         }
-        .ritus-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        
+        .ritus-card:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1); 
+            border-color: #6366f1;
         }
-        /* Loading skeleton effect */
-        .skeleton { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; }
-        @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        .glass-header { 
+            background: rgba(255, 255, 255, 0.8); 
+            backdrop-filter: blur(12px); 
+            border-bottom: 1px solid rgba(0,0,0,0.05); 
+        }
+
+        #loading-overlay {
+            position: fixed; inset: 0; background: #0F172A; z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: white; transition: opacity 0.5s ease;
+        }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none; margin: 0;
+        }
     </style>
 </head>
-<body class="bg-[#F8FAFC] text-slate-900">
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-overlay">
+        <div class="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p class="text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">RITUS CLOUD CONNECTING</p>
+        <button id="bypass-btn" class="mt-8 text-[9px] text-slate-500 underline hidden">MASUK MANUAL (BYPASS)</button>
+    </div>
+
     <div id="root"></div>
+
+    <!-- Firebase System -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, addDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        setTimeout(() => {
+            const btn = document.getElementById('bypass-btn');
+            if(btn) btn.classList.remove('hidden');
+        }, 4000);
+
+        try {
+            const config = JSON.parse(__firebase_config || '{}');
+            const app = initializeApp(config);
+            const auth = getAuth(app);
+            const db = getFirestore(app);
+            
+            window.RitusFirebase = { auth, db, collection, doc, setDoc, onSnapshot, addDoc, deleteDoc, writeBatch, signInAnonymously, onAuthStateChanged };
+        } catch (e) {
+            console.error("Firebase Error", e);
+        }
+    </script>
 
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -36,362 +85,352 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        const APP_LOGO_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAACXBIWXMAAAsTAAALEwEAmpwYAAAFmElEQVR4nO2dW2hcRRSGv5OkkbRpqhZra2N9Eqq0VfBFfBAUfFDe9KmgfRDUiooPgtIqPlS8tH0RfBF8UfBFUfBBX/qi4osvKl6qIig+pL60mqZpmsZkkuxks9mY7GRzssnZ/v+DwwRyeOf8s2fOnDkHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADpE9wOAX4mI7gcAm6T7AXD7REQPAlUoU8YfAtU4DMT6vO3Z77v6oK/Zp60YAbf0S2fO7vD+9u7v79UfC5M565v6pK9v99oG7083+vIun+7Y382K97n6U8e+uR+S+X29/mR93u1D9vV8H+q+78N9v79D19u/0Ncl68uR9X70eT+73qOve/p6m67H1/vX9Yh6/7p69HVXvR8Z36u66L6v6968H94O3A6u5m76+mB756S/63n/Z3/v6N6S9Xf09bbupz7p9+v9677O09f9fX0gXW/X9XRdX99L1+v1/XVdH7SvC/q6v68Lur9fX+/X98V0v8B+X99T17fS19v39W19H319K33d/X8Z6FmEAg9j6hDmgU9hA6U9gA3AFrAN/AK87e/zFmPqB9A/CgUezA5hHvgm8Bl0Uf8X07H1D+jfhAIPYA6Bv/m7X+E0zAF942Cg9An8GZzAn4EvYA3YA66CD2F8FAo8gDkE/t+I9DnsAf8LPAi8C32D8E36P6DAbYcC8A+h0MscAm8BX9N70f8J6B+FAg9jXNrfv4XpX4Wp77Y9SveG96Z8v6593+T9KdrH6F7VPrH9W9v9vV/H/qZpX7V/e3f/oG7/sPaN/9r/99Y+0B7Vv3W8v878P6F/t7UfaI9oH+reH+rf6e7v+v976H9f+9/v7u8V6W/f7O/+0v+Uf0O/lH/7v6f/Zf9P87fX+4/o39X/E/69pf+H+XfA/9f8m/D/JP/G/F/w/19Y39I+rX3S38f65X0H/t976P/v8P/f6P8/p/8H9P+A/u/378X+PdH/Xf4/9NfB/r/y78T+p/X3W6GvO7q38PZ0of8Z3asYlY/p+gDdm+mH2zsn/V36u0rXf9fX6pY96G+iP8T96p98rL7Zf9WlH63L/pS+7O+W/WnZn6Z9pS76Y/vYF9LHvlQX+6K/q5S62Of66z/93e878L886O/O+6K/hZf9vX1/L36F78W5/6YF8A98An0L+Bb6e6Cvef+39X1097u9X7rYn/Kj+fWlvv0pX76fU5pfc8rXmF+jfn2pX5+v0f9qR686X9/Pq9LXl/P68m6f7773fK86D+n6eO/3+v05fX6976e66e9Hdr/u/9H2Ovt9m8vH8O8D6Vp/5f9K/v0V0eW+/Z1WfX6WfS1W6f7C6P7Ofp90fV79Puh8fX6/875P0+6X5P88/P68uL9vT/R+6f3S/6/of+L7D91f7e9v/p+83+7/T/x/9f/X/O+v777p/pPuv+f/U/X/7/+98rW/6Oqj7h/q6p/tF9/f09YB+H9H9Q7rf/W8z+r9Xv07V35Pr63T6On3dn9fX7U/W1+0O+tp9vbvW/+VvX7T//fW1un0Nfa1uP9DX0NbW/Xn9N9S1t68vun9F9zf09U19fa/779G/pP9P/Vv7f17/Vv+W/mf7X/H/Rf8X/Z/v/9f9K7p/Vvcv+H9m96P+C/r3q/0v6f6f7r+s+5d0f6v779Tf3/T/Yf9S/qW6f6H7X9L9df0/0v8X9F/S/0n/Z/rfVvdfvK6v870v5z6f/76Y+77e9/G853Ofp6+n72Pr67H19dhfXvOez/u+fT69Zz979vL0vFp9Huv78n68D6/N/vKq81f+8qzPr52/UqGzO7y/vfv7e/XHYmXO+qY+6et6/0X9Z/ufrf/p+p8OfA6BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPyP+Q9p9pYyE+pT2QAAAABJRU5ErkJggg==";
-
         function App() {
-            const [user, setUser] = useState(null);
             const [inventory, setInventory] = useState([]);
             const [transactions, setTransactions] = useState([]);
-            const [loading, setLoading] = useState(true);
             const [tab, setTab] = useState('dashboard');
-            const [categoryFilter, setCategoryFilter] = useState('apparel');
-            const [searchQuery, setSearchQuery] = useState('');
+            const [search, setSearch] = useState('');
             const [showModal, setShowModal] = useState(null);
-            const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-            const fileInputRef = useRef(null);
+            const [selectedItem, setSelectedItem] = useState(null);
+            const [isImporting, setIsImporting] = useState(false);
             
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'ritus-street-inventory';
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'ritus-street-v1';
+            const fileInputRef = useRef(null);
 
             useEffect(() => {
-                const init = async () => {
-                    // Timeout safety: Jika auth gagal dalam 5 detik, paksa masuk ke mode offline/guest
-                    const timeout = setTimeout(() => { if (!user) setLoading(false); }, 5000);
-
-                    try {
-                        const firebaseConfig = JSON.parse(__firebase_config);
-                        const app = window.Firebase.initializeApp(firebaseConfig);
-                        const auth = window.Firebase.getAuth(app);
+                const interval = setInterval(() => {
+                    if (window.RitusFirebase) {
+                        const { auth, signInAnonymously, onAuthStateChanged, db, collection, onSnapshot } = window.RitusFirebase;
                         
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await window.Firebase.signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            await window.Firebase.signInAnonymously(auth);
-                        }
+                        signInAnonymously(auth).catch(console.error);
+                        
+                        onAuthStateChanged(auth, (user) => {
+                            if (user) {
+                                document.getElementById('loading-overlay').style.opacity = '0';
+                                setTimeout(() => document.getElementById('loading-overlay')?.remove(), 500);
 
-                        window.Firebase.onAuthStateChanged(auth, (u) => {
-                            if (u) {
-                                setUser(u);
-                                setLoading(false);
-                                clearTimeout(timeout);
+                                const invRef = collection(db, 'artifacts', appId, 'public', 'data', 'inventory');
+                                const transRef = collection(db, 'artifacts', appId, 'public', 'data', 'transactions');
+
+                                onSnapshot(invRef, (s) => setInventory(s.docs.map(d => ({id: d.id, ...d.data()}))));
+                                onSnapshot(transRef, (s) => setTransactions(s.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp))));
                             }
                         });
-                    } catch (err) {
-                        console.error("Auth Init Error:", err);
-                        setLoading(false); // Tetap matikan loading agar UI muncul
+                        clearInterval(interval);
                     }
-                };
-                init();
+                }, 500);
+
+                return () => clearInterval(interval);
             }, []);
 
-            useEffect(() => {
-                if (!user) return;
-                const db = window.Firebase.getFirestore();
+            useEffect(() => { if(window.lucide) window.lucide.createIcons(); }, [tab, inventory, isImporting]);
+
+            const handleUpdateStock = async (e) => {
+                e.preventDefault();
+                const amount = parseInt(e.target.amount.value);
+                const type = showModal === 'in' ? 'in' : 'out';
+                const newStock = type === 'in' ? (selectedItem.stock || 0) + amount : (selectedItem.stock || 0) - amount;
+
+                if(newStock < 0) return alert("Stok tidak cukup!");
+
+                const { db, doc, setDoc, addDoc, collection } = window.RitusFirebase;
                 
-                const invPath = window.Firebase.collection(db, 'artifacts', appId, 'public', 'data', 'inventory');
-                const transPath = window.Firebase.collection(db, 'artifacts', appId, 'public', 'data', 'transactions');
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'inventory', selectedItem.id), {
+                    ...selectedItem, stock: newStock
+                }, { merge: true });
 
-                const unsubInv = window.Firebase.onSnapshot(invPath, (snap) => {
-                    const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    setInventory(data);
-                }, (err) => console.error("Firestore Inv Error:", err));
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'transactions'), {
+                    itemId: selectedItem.id,
+                    itemName: selectedItem.name,
+                    size: selectedItem.size,
+                    type,
+                    amount,
+                    timestamp: new Date().toISOString()
+                });
 
-                const unsubTrans = window.Firebase.onSnapshot(transPath, (snap) => {
-                    const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    setTransactions(data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
-                }, (err) => console.error("Firestore Trans Error:", err));
-
-                return () => { unsubInv(); unsubTrans(); };
-            }, [user]);
-
-            useEffect(() => { if(window.lucide) window.lucide.createIcons(); }, [tab, inventory, isSidebarOpen, categoryFilter, searchQuery, loading]);
-
-            const handleUpdateStock = async (item, size, change, type) => {
-                if (!user) return;
-                const db = window.Firebase.getFirestore();
-                const docRef = window.Firebase.doc(db, 'artifacts', appId, 'public', 'data', 'inventory', item.id);
-                
-                let updatedData = { ...item };
-                if (item.category === 'apparel') {
-                    if (!updatedData.sizes) updatedData.sizes = { S: 0, M: 0, L: 0, XL: 0 };
-                    updatedData.sizes[size] = Math.max(0, (updatedData.sizes[size] || 0) + change);
-                } else {
-                    updatedData.stock = Math.max(0, (updatedData.stock || 0) + change);
-                }
-
-                try {
-                    await window.Firebase.setDoc(docRef, updatedData);
-                    await window.Firebase.addDoc(window.Firebase.collection(db, 'artifacts', appId, 'public', 'data', 'transactions'), {
-                        itemName: item.name,
-                        itemCategory: item.category,
-                        info: size || 'Unit',
-                        type,
-                        amount: Math.abs(change),
-                        timestamp: new Date().toISOString(),
-                        userId: user.uid
-                    });
-                } catch (e) {
-                    console.error("Update failed:", e);
-                }
+                setShowModal(null);
             };
 
-            const handleFileUpload = (e) => {
+            const handleCSVImport = (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
 
+                setIsImporting(true);
                 const reader = new FileReader();
                 reader.onload = async (event) => {
                     const text = event.target.result;
-                    const lines = text.split('\n').map(l => l.trim()).filter(l => l !== '' && !l.startsWith(';;'));
-                    const db = window.Firebase.getFirestore();
+                    const rows = text.split('\n').filter(row => row.trim() !== '');
+                    const { db, doc, setDoc, addDoc, collection, writeBatch } = window.RitusFirebase;
+
+                    // Nama;Info;Jenis;Tipe;Jumlah;Waktu
+                    // Header skip: rows[0]
+                    const batch = writeBatch(db);
                     
-                    for (let i = 1; i < lines.length; i++) {
-                        const parts = lines[i].split(';');
-                        if (parts.length < 5 || !parts[0]) continue;
+                    for (let i = 1; i < rows.length; i++) {
+                        const cols = rows[i].split(';');
+                        if (cols.length < 5) continue;
 
-                        const [name, info, categoryRaw, typeRaw, amountStr] = parts;
-                        const category = categoryRaw.toLowerCase().includes('apparel') ? 'apparel' : 'aksesoris';
-                        const type = typeRaw.toLowerCase() === 'in' ? 'in' : 'out';
-                        const amount = parseInt(amountStr) || 0;
+                        const name = cols[0].trim();
+                        const info = cols[1].trim(); // Size
+                        const category = cols[2].trim();
+                        const type = cols[3].trim().toLowerCase() === 'in' ? 'in' : 'out';
+                        const amount = parseInt(cols[4]) || 0;
 
-                        let existingItem = inventory.find(item => item.name.trim().toLowerCase() === name.trim().toLowerCase());
+                        if (!name || amount === 0) continue;
 
-                        if (existingItem) {
-                            const change = type === 'in' ? amount : -amount;
-                            await handleUpdateStock(existingItem, category === 'apparel' ? info.trim() : null, change, type);
-                        } else {
-                            const newItem = {
-                                name: name.trim(),
-                                category: category,
-                                createdAt: new Date().toISOString()
-                            };
-                            if (category === 'apparel') {
-                                newItem.sizes = { S: 0, M: 0, L: 0, XL: 0 };
-                                newItem.sizes[info.trim()] = amount;
-                            } else {
-                                newItem.stock = amount;
-                            }
-                            
-                            await window.Firebase.addDoc(window.Firebase.collection(db, 'artifacts', appId, 'public', 'data', 'inventory'), newItem);
-                            await window.Firebase.addDoc(window.Firebase.collection(db, 'artifacts', appId, 'public', 'data', 'transactions'), {
-                                itemName: newItem.name,
-                                itemCategory: newItem.category,
-                                info: category === 'apparel' ? info.trim() : 'Unit',
-                                type: 'in',
-                                amount: amount,
-                                timestamp: new Date().toISOString(),
-                                userId: user.uid
-                            });
-                        }
+                        // Cari item yang ada atau buat ID unik berdasarkan nama+size
+                        const itemId = `${name.toLowerCase().replace(/\s+/g, '-')}-${info.toLowerCase()}`;
+                        const existingItem = inventory.find(item => item.id === itemId);
+                        
+                        const currentStock = existingItem ? (existingItem.stock || 0) : 0;
+                        const newStock = type === 'in' ? currentStock + amount : currentStock - amount;
+
+                        const itemRef = doc(db, 'artifacts', appId, 'public', 'data', 'inventory', itemId);
+                        batch.set(itemRef, {
+                            id: itemId,
+                            name,
+                            size: info,
+                            category,
+                            stock: newStock,
+                            lastUpdated: new Date().toISOString()
+                        }, { merge: true });
+
+                        // Log Transaksi
+                        const transRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'transactions'));
+                        batch.set(transRef, {
+                            itemId,
+                            itemName: name,
+                            size: info,
+                            type,
+                            amount,
+                            timestamp: new Date().toISOString(),
+                            source: 'CSV Import'
+                        });
+                    }
+
+                    try {
+                        await batch.commit();
+                        alert("Impor CSV Berhasil!");
+                    } catch (err) {
+                        console.error(err);
+                        alert("Gagal mengimpor data.");
+                    } finally {
+                        setIsImporting(false);
+                        e.target.value = '';
                     }
                 };
                 reader.readAsText(file);
             };
 
-            const stats = {
-                totalItems: inventory.length,
-                totalStock: inventory.reduce((acc, i) => {
-                    if(i.category === 'apparel') return acc + Object.values(i.sizes || {}).reduce((a, b) => a + b, 0);
-                    return acc + (i.stock || 0);
-                }, 0),
-                lowStock: inventory.filter(i => {
-                    if(i.category === 'aksesoris') return (i.stock || 0) < 5;
-                    return Object.values(i.sizes || {}).some(v => v < 2);
-                }).length
-            };
-
-            if (loading) return (
-                <div className="h-screen flex flex-col items-center justify-center bg-slate-950 text-white">
-                    <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-6"></div>
-                    <p className="text-[12px] font-black uppercase tracking-[0.4em] animate-pulse">Menghubungkan Ritus Cloud...</p>
-                </div>
-            );
+            const totalStock = inventory.reduce((acc, curr) => acc + (curr.stock || 0), 0);
+            const totalIn = transactions.filter(t => t.type === 'in').reduce((acc, curr) => acc + curr.amount, 0);
+            const totalOut = transactions.filter(t => t.type === 'out').reduce((acc, curr) => acc + curr.amount, 0);
 
             return (
-                <div className="min-h-screen pb-20">
-                    <input type="file" accept=".csv" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
-
-                    {/* SIDEBAR */}
-                    <div className={`fixed inset-y-0 left-0 w-72 bg-[#0F172A] text-white z-[150] transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-                        <div className="p-8 border-b border-white/5 flex items-center gap-4">
-                            <img src={APP_LOGO_BASE64} className="w-10 h-10" />
-                            <div>
-                                <h1 className="font-black italic text-xl leading-none">RITUS</h1>
-                                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Inventory System</p>
-                            </div>
+                <div className="min-h-screen flex flex-col md:flex-row">
+                    {/* Navigation Sidebar */}
+                    <div className="w-full md:w-64 bg-slate-900 text-white p-8 flex flex-col shrink-0">
+                        <div className="mb-12 flex items-center gap-3">
+                            <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center font-black italic text-xl shadow-lg shadow-indigo-500/20">R</div>
+                            <h1 className="font-black italic text-2xl tracking-tighter">RITUS</h1>
                         </div>
-                        <nav className="p-6 space-y-2">
+                        
+                        <nav className="space-y-3 flex-1">
                             {[
-                                { id: 'dashboard', label: 'Dashboard', icon: 'layout' },
-                                { id: 'inventory', label: 'Stok Barang', icon: 'package' },
-                                { id: 'history', label: 'Riwayat', icon: 'history' }
-                            ].map(t => (
-                                <button key={t.id} onClick={() => {setTab(t.id); setIsSidebarOpen(false)}} className={`w-full text-left p-4 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 transition-all ${tab === t.id ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800'}`}>
-                                    <i data-lucide={t.icon} size="16"></i>
-                                    {t.label}
+                                { id: 'dashboard', icon: 'layout-dashboard', label: 'DASHBOARD' },
+                                { id: 'inventory', icon: 'package', label: 'STOK BARANG' },
+                                { id: 'history', icon: 'clock', label: 'RIWAYAT' }
+                            ].map(item => (
+                                <button 
+                                    key={item.id}
+                                    onClick={() => setTab(item.id)}
+                                    className={`w-full flex items-center gap-4 p-4 rounded-2xl text-[10px] font-black tracking-widest transition-all ${tab === item.id ? 'bg-indigo-600 shadow-lg shadow-indigo-500/20 text-white' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
+                                >
+                                    <i data-lucide={item.icon} className="w-4 h-4"></i>
+                                    {item.label}
                                 </button>
                             ))}
                         </nav>
-                        <div className="absolute bottom-8 left-0 w-full px-6">
-                            <button onClick={() => fileInputRef.current.click()} className="w-full flex items-center justify-center gap-2 p-4 bg-slate-800 hover:bg-indigo-500 rounded-2xl text-[10px] font-black uppercase transition-all tracking-widest border border-white/5">
-                                <i data-lucide="upload" size="14"></i> Import CSV
+
+                        <div className="mt-auto pt-8 border-t border-slate-800">
+                            <button 
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={isImporting}
+                                className="w-full flex items-center justify-center gap-3 p-4 bg-slate-800 rounded-2xl text-[10px] font-black tracking-widest hover:bg-slate-700 transition-all disabled:opacity-50"
+                            >
+                                <i data-lucide={isImporting ? "refresh-cw" : "upload"} className={`w-4 h-4 ${isImporting ? 'animate-spin' : ''}`}></i>
+                                {isImporting ? 'IMPORTING...' : 'IMPOR CSV'}
                             </button>
+                            <input type="file" ref={fileInputRef} onChange={handleCSVImport} accept=".csv" className="hidden" />
                         </div>
                     </div>
 
-                    {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[140]"></div>}
-
-                    {/* HEADER */}
-                    <header className="glass-card h-20 px-6 flex items-center justify-between sticky top-0 z-50">
-                        <div className="flex items-center gap-4">
-                            <button onClick={() => setIsSidebarOpen(true)} className="p-3 bg-white border rounded-xl shadow-sm"><i data-lucide="menu" size="20"></i></button>
-                            <h2 className="font-black italic uppercase text-lg tracking-tighter">{tab}</h2>
-                        </div>
-                        <div className="relative w-48 md:w-64">
-                            <i data-lucide="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size="14"></i>
-                            <input 
-                                type="text" placeholder="CARI ARTIKEL..." 
-                                className="w-full pl-9 pr-4 py-2 bg-slate-100 border-none rounded-xl text-[10px] font-bold uppercase outline-none focus:ring-2 ring-indigo-500/20"
-                                value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                            />
-                        </div>
-                    </header>
-
-                    <main className="max-w-6xl mx-auto p-6 mt-4">
-                        {tab === 'dashboard' && (
-                            <div className="space-y-8 animate-in fade-in duration-700">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    {[
-                                        { label: 'Total Artikel', val: stats.totalItems, color: 'text-slate-900', icon: 'layers' },
-                                        { label: 'Stok Terhitung', val: stats.totalStock, color: 'text-indigo-600', icon: 'package' },
-                                        { label: 'Stok Menipis', val: stats.lowStock, color: 'text-rose-500', icon: 'alert-triangle' }
-                                    ].map((s, idx) => (
-                                        <div key={idx} className="bg-white p-8 ritus-card border shadow-sm relative overflow-hidden group">
-                                            <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-10 transition-opacity">
-                                                <i data-lucide={s.icon} size="80"></i>
-                                            </div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase italic mb-1">{s.label}</p>
-                                            <h3 className={`text-5xl font-black italic tracking-tighter ${s.color}`}>{s.val}</h3>
-                                        </div>
-                                    ))}
+                    {/* Main Content */}
+                    <div className="flex-1 flex flex-col h-screen overflow-hidden">
+                        <header className="glass-header h-24 px-8 flex items-center justify-between shrink-0">
+                            <h2 className="font-black italic uppercase text-xs tracking-[0.4em] text-slate-400">{tab}</h2>
+                            <div className="flex items-center gap-6">
+                                <div className="text-right hidden md:block">
+                                    <p className="text-[10px] font-black italic text-slate-900">RITUS ADMIN</p>
+                                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Master Warehouse</p>
                                 </div>
-
-                                <div className="bg-white p-8 ritus-card border shadow-sm">
-                                    <h4 className="font-black italic uppercase text-sm mb-6 flex items-center gap-2"><i data-lucide="activity" size="16"></i> Aktivitas Terakhir</h4>
-                                    <div className="space-y-3">
-                                        {transactions.slice(0, 8).map(t => (
-                                            <div key={t.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-colors">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${t.type === 'in' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
-                                                        <i data-lucide={t.type === 'in' ? 'arrow-down-left' : 'arrow-up-right'} size="14"></i>
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-black text-[10px] uppercase italic">{t.itemName}</p>
-                                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{t.info} • {new Date(t.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                                                    </div>
-                                                </div>
-                                                <p className={`font-black italic text-lg ${t.type === 'in' ? 'text-emerald-500' : 'text-rose-500'}`}>{t.type === 'in' ? '+' : '-'}{t.amount}</p>
-                                            </div>
-                                        ))}
-                                        {transactions.length === 0 && (
-                                            <div className="py-12 flex flex-col items-center justify-center text-slate-300">
-                                                <i data-lucide="inbox" size="32" className="mb-2"></i>
-                                                <p className="text-[10px] font-bold uppercase italic">Belum ada riwayat aktivitas</p>
-                                            </div>
-                                        )}
-                                    </div>
+                                <div className="w-12 h-12 bg-indigo-50 rounded-2xl border-2 border-white shadow-sm flex items-center justify-center text-indigo-600">
+                                    <i data-lucide="user" className="w-6 h-6"></i>
                                 </div>
                             </div>
-                        )}
+                        </header>
 
-                        {tab === 'inventory' && (
-                            <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-                                <div className="flex flex-wrap justify-between items-center gap-4">
-                                    <div className="flex bg-white p-1 rounded-2xl border shadow-sm">
-                                        <button onClick={() => setCategoryFilter('apparel')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${categoryFilter === 'apparel' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-400'}`}>Apparel</button>
-                                        <button onClick={() => setCategoryFilter('aksesoris')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${categoryFilter === 'aksesoris' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-400'}`}>Aksesoris</button>
+                        <main className="flex-1 overflow-y-auto p-8 bg-[#F8FAFC]">
+                            {tab === 'dashboard' && (
+                                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                    {/* Stats Grid */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="ritus-card bg-white p-10 flex flex-col group">
+                                            <div className="flex justify-between items-start mb-6">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Total SKU</p>
+                                                <i data-lucide="tag" className="w-4 h-4 text-slate-200 group-hover:text-indigo-400 transition-colors"></i>
+                                            </div>
+                                            <h3 className="text-6xl font-black italic text-slate-900 tracking-tighter">{inventory.length}</h3>
+                                            <p className="text-[9px] font-bold text-slate-300 uppercase mt-4 tracking-widest">Unique Articles</p>
+                                        </div>
+                                        <div className="ritus-card bg-indigo-600 p-10 flex flex-col text-white shadow-2xl shadow-indigo-200">
+                                            <div className="flex justify-between items-start mb-6">
+                                                <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest italic">Inventory Stock</p>
+                                                <i data-lucide="package" className="w-4 h-4 text-indigo-400"></i>
+                                            </div>
+                                            <h3 className="text-6xl font-black italic tracking-tighter">{totalStock}</h3>
+                                            <p className="text-[9px] font-bold text-indigo-300 uppercase mt-4 tracking-widest">Total PCS in Cloud</p>
+                                        </div>
+                                        <div className="ritus-card bg-slate-900 p-10 flex flex-col text-white">
+                                            <div className="flex justify-between items-start mb-6">
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Cloud Logs</p>
+                                                <i data-lucide="activity" className="w-4 h-4 text-slate-700"></i>
+                                            </div>
+                                            <h3 className="text-6xl font-black italic tracking-tighter">{transactions.length}</h3>
+                                            <p className="text-[9px] font-bold text-slate-500 uppercase mt-4 tracking-widest">Total Activity</p>
+                                        </div>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <button onClick={() => setShowModal('add')} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-200 flex items-center gap-2">
-                                            <i data-lucide="plus" size="14"></i> Tambah Artikel
-                                        </button>
+
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                        {/* Activity List */}
+                                        <div className="ritus-card bg-white p-10 border border-slate-100">
+                                            <div className="flex justify-between items-center mb-10">
+                                                <h4 className="font-black italic uppercase text-xs tracking-[0.2em]">Aktivitas Terakhir</h4>
+                                                <span className="text-[8px] font-black bg-slate-100 px-3 py-1 rounded-full uppercase italic text-slate-400 tracking-widest">Live Sync</span>
+                                            </div>
+                                            <div className="space-y-6">
+                                                {transactions.slice(0, 6).map(t => (
+                                                    <div key={t.id} className="flex justify-between items-center pb-6 border-b border-slate-50 last:border-0 last:pb-0 group">
+                                                        <div>
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <p className="font-black italic uppercase text-sm tracking-tight group-hover:text-indigo-600 transition-colors">{t.itemName}</p>
+                                                                <span className="text-[9px] font-bold text-slate-300">({t.size})</span>
+                                                            </div>
+                                                            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{new Date(t.timestamp).toLocaleTimeString()}</p>
+                                                        </div>
+                                                        <div className={`text-right font-black italic text-2xl tracking-tighter ${t.type === 'in' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                            {t.type === 'in' ? '+' : '-'}{t.amount}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {transactions.length === 0 && <p className="text-center py-10 text-slate-300 font-bold uppercase text-[10px] tracking-[0.2em]">Belum ada aktivitas.</p>}
+                                            </div>
+                                        </div>
+
+                                        {/* Mini Inventory Info */}
+                                        <div className="ritus-card bg-slate-50/50 border border-dashed border-slate-200 p-10 flex flex-col justify-center items-center text-center">
+                                            <div className="w-20 h-20 bg-white rounded-3xl shadow-sm flex items-center justify-center mb-6">
+                                                <i data-lucide="cloud-upload" className="w-8 h-8 text-indigo-600"></i>
+                                            </div>
+                                            <h4 className="font-black italic uppercase text-sm mb-2 tracking-tight">Siap Impor Masal?</h4>
+                                            <p className="text-[10px] text-slate-400 font-medium max-w-xs leading-relaxed uppercase tracking-widest mb-8">
+                                                Gunakan fitur CSV di sidebar untuk memperbarui stok dari file Ritus.csv Anda secara otomatis.
+                                            </p>
+                                            <button 
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="px-8 py-4 bg-white border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:border-indigo-600 hover:text-indigo-600 transition-all shadow-sm"
+                                            >
+                                                Pilih File .CSV
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
+                            )}
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {inventory.filter(i => i.category === categoryFilter && i.name.toLowerCase().includes(searchQuery.toLowerCase())).map(item => (
-                                        <div key={item.id} className="bg-white p-6 ritus-card border shadow-sm">
-                                            <div className="flex justify-between items-start mb-6">
-                                                <div>
-                                                    <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest italic">ARTIKEL</span>
-                                                    <h3 className="font-black italic uppercase text-lg tracking-tighter leading-none">{item.name}</h3>
+                            {tab === 'inventory' && (
+                                <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                                    <div className="relative w-full max-w-md group">
+                                        <i data-lucide="search" className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-indigo-500 transition-colors"></i>
+                                        <input 
+                                            type="text" 
+                                            placeholder="CARI ARTIKEL..."
+                                            className="w-full pl-16 pr-8 py-5 bg-white rounded-[2rem] text-[10px] font-black outline-none border border-slate-100 shadow-sm focus:ring-4 ring-indigo-500/5 transition-all uppercase tracking-widest"
+                                            value={search}
+                                            onChange={(e) => setSearch(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                        {inventory.filter(i => i.name.toLowerCase().includes(search.toLowerCase())).map(item => (
+                                            <div key={item.id} className="ritus-card bg-white p-8 flex flex-col shadow-sm">
+                                                <div className="flex justify-between items-start mb-8">
+                                                    <span className="text-[9px] font-black bg-indigo-50 text-indigo-600 px-4 py-1.5 rounded-full uppercase tracking-[0.2em] italic">
+                                                        SIZE {item.size || 'ALL'}
+                                                    </span>
+                                                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
                                                 </div>
-                                                <button onClick={async () => {if(confirm('Hapus artikel ini?')) await window.Firebase.deleteDoc(window.Firebase.doc(window.Firebase.getFirestore(), 'artifacts', appId, 'public', 'data', 'inventory', item.id))}} className="text-slate-200 hover:text-rose-500 transition-colors p-2"><i data-lucide="trash-2" size="14"></i></button>
-                                            </div>
-
-                                            {item.category === 'apparel' ? (
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    {['S', 'M', 'L', 'XL'].map(sz => (
-                                                        <div key={sz} className="bg-slate-50 p-3 rounded-2xl flex justify-between items-center border border-transparent hover:border-slate-200 transition-all">
-                                                            <div>
-                                                                <p className="text-[8px] font-black text-slate-400 uppercase leading-none mb-1">{sz}</p>
-                                                                <p className="text-xl font-black italic">{item.sizes?.[sz] || 0}</p>
-                                                            </div>
-                                                            <div className="flex flex-col gap-1">
-                                                                <button onClick={() => handleUpdateStock(item, sz, 1, 'in')} className="p-1 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"><i data-lucide="plus" size="12"></i></button>
-                                                                <button onClick={() => handleUpdateStock(item, sz, -1, 'out')} className="p-1 bg-rose-500 text-white rounded-lg hover:bg-rose-600"><i data-lucide="minus" size="12"></i></button>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <div className="flex justify-between items-end bg-slate-50 p-4 rounded-2xl">
+                                                
+                                                <h3 className="text-2xl font-black italic uppercase leading-none mb-2 tracking-tighter group-hover:text-indigo-600 transition-colors">{item.name}</h3>
+                                                <p className="text-[8px] font-bold text-slate-300 mb-10 uppercase tracking-[0.3em] italic">{item.category || 'Ritus Wear'}</p>
+                                                
+                                                <div className="mt-auto flex items-end justify-between border-t border-slate-50 pt-6">
                                                     <div>
-                                                        <p className="text-[8px] font-black text-slate-400 uppercase mb-1">STOK UNIT</p>
-                                                        <p className="text-5xl font-black italic tracking-tighter">{item.stock || 0}</p>
+                                                        <p className="text-[8px] font-black text-slate-300 uppercase mb-1 tracking-widest italic">STOK GUDANG</p>
+                                                        <p className="text-5xl font-black italic tracking-tighter text-slate-900">{item.stock || 0}</p>
                                                     </div>
                                                     <div className="flex gap-2">
-                                                        <button onClick={() => handleUpdateStock(item, null, 1, 'in')} className="w-12 h-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center hover:bg-emerald-600 shadow-md"><i data-lucide="plus" size="20"></i></button>
-                                                        <button onClick={() => handleUpdateStock(item, null, -1, 'out')} className="w-12 h-12 bg-rose-500 text-white rounded-2xl flex items-center justify-center hover:bg-rose-600 shadow-md"><i data-lucide="minus" size="20"></i></button>
+                                                        <button onClick={() => {setSelectedItem(item); setShowModal('in')}} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
+                                                            <i data-lucide="plus" className="w-5 h-5"></i>
+                                                        </button>
+                                                        <button onClick={() => {setSelectedItem(item); setShowModal('out')}} className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center hover:bg-black transition-all shadow-lg shadow-slate-900/20 active:scale-95">
+                                                            <i data-lucide="minus" className="w-5 h-5"></i>
+                                                        </button>
                                                     </div>
                                                 </div>
-                                            )}
-                                        </div>
-                                    ))}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        {tab === 'history' && (
-                            <div className="bg-white ritus-card border shadow-sm overflow-hidden animate-in fade-in duration-500">
-                                <div className="p-6 border-b bg-slate-50 flex justify-between items-center">
-                                    <h4 className="font-black italic uppercase text-sm">Log Transaksi Cloud</h4>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{transactions.length} Entri Terdeteksi</p>
-                                </div>
-                                <div className="overflow-x-auto">
+                            {tab === 'history' && (
+                                <div className="ritus-card bg-white border border-slate-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
                                     <table className="w-full text-left">
-                                        <thead className="border-b">
+                                        <thead className="bg-slate-50">
                                             <tr>
-                                                <th className="p-6 text-[9px] font-black uppercase text-slate-400 italic">Waktu</th>
-                                                <th className="p-6 text-[9px] font-black uppercase text-slate-400 italic">Produk</th>
-                                                <th className="p-6 text-[9px] font-black uppercase text-slate-400 italic text-center">Info</th>
-                                                <th className="p-6 text-[9px] font-black uppercase text-slate-400 italic text-right">Kuantitas</th>
+                                                <th className="px-10 py-8 text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] italic">Artikel Detail</th>
+                                                <th className="px-10 py-8 text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] italic text-center">Tipe Transaksi</th>
+                                                <th className="px-10 py-8 text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] italic text-right">Jumlah (PCS)</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-50">
-                                            {transactions.filter(t => t.itemName.toLowerCase().includes(searchQuery.toLowerCase())).map(t => (
-                                                <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
-                                                    <td className="p-6">
-                                                        <p className="text-[10px] font-bold text-slate-900">{new Date(t.timestamp).toLocaleDateString()}</p>
-                                                        <p className="text-[9px] font-bold text-slate-400">{new Date(t.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                            {transactions.map(t => (
+                                                <tr key={t.id} className="hover:bg-slate-50/50 transition-colors group">
+                                                    <td className="px-10 py-8">
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="font-black italic text-base uppercase tracking-tight group-hover:text-indigo-600 transition-colors">{t.itemName}</p>
+                                                            <span className="text-[10px] font-bold text-slate-300">({t.size})</span>
+                                                        </div>
+                                                        <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
+                                                            {new Date(t.timestamp).toLocaleDateString('id-ID')} — {new Date(t.timestamp).toLocaleTimeString()}
+                                                            {t.source && <span className="ml-2 text-indigo-400 italic">via {t.source}</span>}
+                                                        </p>
                                                     </td>
-                                                    <td className="p-6">
-                                                        <p className="font-black text-xs uppercase italic">{t.itemName}</p>
-                                                        <p className="text-[8px] font-black text-indigo-400 uppercase tracking-tighter">{t.itemCategory}</p>
+                                                    <td className="px-10 py-8 text-center">
+                                                        <span className={`px-5 py-2 rounded-full text-[9px] font-black italic uppercase tracking-[0.2em] ${t.type === 'in' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                                            {t.type === 'in' ? 'BARANG MASUK' : 'BARANG KELUAR'}
+                                                        </span>
                                                     </td>
-                                                    <td className="p-6 text-center">
-                                                        <span className="px-3 py-1 bg-slate-100 rounded-full text-[9px] font-black uppercase italic text-slate-500">{t.info}</span>
-                                                    </td>
-                                                    <td className={`p-6 text-right font-black italic text-xl ${t.type === 'in' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                    <td className={`px-10 py-8 text-right font-black italic text-3xl tracking-tighter ${t.type === 'in' ? 'text-emerald-500' : 'text-rose-500'}`}>
                                                         {t.type === 'in' ? '+' : '-'}{t.amount}
                                                     </td>
                                                 </tr>
@@ -399,40 +438,46 @@
                                         </tbody>
                                     </table>
                                 </div>
-                            </div>
-                        )}
-                    </main>
+                            )}
+                        </main>
+                    </div>
 
-                    {/* MODAL ADD */}
-                    {showModal === 'add' && (
-                        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-                            <div className="bg-white rounded-[2.5rem] w-full max-w-sm p-8 modal-animate shadow-2xl">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h2 className="text-xl font-black italic uppercase tracking-tighter">New {categoryFilter}</h2>
-                                    <button onClick={() => setShowModal(null)} className="text-slate-300 hover:text-slate-900"><i data-lucide="x" size="20"></i></button>
+                    {/* Transaction Modal */}
+                    {showModal && (
+                        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[200] flex items-center justify-center p-6">
+                            <div className="bg-white rounded-[3.5rem] w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in duration-200">
+                                <div className={`p-12 ${showModal === 'in' ? 'bg-indigo-600 shadow-indigo-500/20 shadow-2xl' : 'bg-slate-900 shadow-slate-900/20 shadow-2xl'} text-white`}>
+                                    <h2 className="text-3xl font-black italic uppercase tracking-tighter mb-2">
+                                        {showModal === 'in' ? 'TAMBAH STOK' : 'KELUAR STOK'}
+                                    </h2>
+                                    <p className="text-[10px] font-bold opacity-60 uppercase tracking-[0.3em] italic">{selectedItem?.name} (Size {selectedItem?.size})</p>
                                 </div>
-                                <form onSubmit={async e => {
-                                    e.preventDefault();
-                                    const name = e.target.name.value;
-                                    const db = window.Firebase.getFirestore();
-                                    const data = {
-                                        name,
-                                        category: categoryFilter,
-                                        createdAt: new Date().toISOString()
-                                    };
-                                    if(categoryFilter === 'apparel') data.sizes = { S: 0, M: 0, L: 0, XL: 0 };
-                                    else data.stock = 0;
-
-                                    await window.Firebase.addDoc(window.Firebase.collection(db, 'artifacts', appId, 'public', 'data', 'inventory'), data);
-                                    setShowModal(null);
-                                }}>
-                                    <div className="mb-6">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block italic">Nama Artikel</label>
-                                        <input name="name" required placeholder="NAMA PRODUK..." className="w-full p-4 bg-slate-100 rounded-2xl font-black text-[10px] uppercase outline-none border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all" />
+                                <form onSubmit={handleUpdateStock} className="p-12">
+                                    <div className="mb-12 text-center">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 italic">Masukkan Kuantitas</p>
+                                        <input 
+                                            name="amount" 
+                                            type="number" 
+                                            required 
+                                            autoFocus
+                                            className="w-full text-center text-8xl font-black italic text-slate-900 outline-none bg-transparent tracking-tighter" 
+                                            placeholder="0"
+                                        />
                                     </div>
-                                    <div className="flex gap-2">
-                                        <button type="button" onClick={() => setShowModal(null)} className="flex-1 py-4 font-black text-[10px] uppercase text-slate-400 italic">Batal</button>
-                                        <button type="submit" className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-indigo-200 tracking-widest">Simpan</button>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setShowModal(null)}
+                                            className="py-6 bg-slate-100 text-slate-400 rounded-3xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-colors italic"
+                                        >
+                                            BATAL
+                                        </button>
+                                        <button 
+                                            type="submit" 
+                                            className={`py-6 text-white rounded-3xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all italic ${showModal === 'in' ? 'bg-indigo-600 shadow-indigo-500/20 hover:bg-indigo-700' : 'bg-slate-900 shadow-slate-900/20 hover:bg-black'}`}
+                                        >
+                                            KONFIRMASI
+                                        </button>
                                     </div>
                                 </form>
                             </div>
@@ -444,13 +489,6 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
-    </script>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, onSnapshot, addDoc, deleteDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        window.Firebase = { initializeApp, getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken, getFirestore, collection, doc, setDoc, onSnapshot, addDoc, deleteDoc, query };
     </script>
 </body>
 </html>
