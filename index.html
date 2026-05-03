@@ -14,32 +14,20 @@
     </div>
 
     <div id="root"></div>
-
+    
     <!-- 1. Libraries -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- 2. Firebase Config (Harus dimuat lebih dulu) -->
+    <!-- 2. Firebase Config -->
     <script src="firebase-config.js" type="module"></script>
 
-    <!-- 3. Logic Bridge (Menghubungkan Babel dan Module) -->
-    <script type="text/babel">
-        // Fungsi untuk menunggu sampai Firebase Ready
-        const waitForConfig = setInterval(() => {
-            if (window.RitusDB) {
-                clearInterval(waitForConfig);
-                loadApp();
-            }
-        }, 100);
-
-        function loadApp() {
-            // Memuat file App.js secara dinamis agar diproses Babel
-            const script = document.createElement('script');
-            script.src = 'App.js';
-            script.type = 'text/babel';
-            document.body.appendChild(script);
-        }
+    <!-- 3. App Logic -->
+    <script type="text/babel" data-type="module">
+        // Kita langsung panggil file App.js di sini agar Babel pasti memprosesnya
+        import './App.js';
     </script>
 </body>
 </html>
+   
