@@ -1,0 +1,71 @@
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Inter:wght@400;700;900&family=Space+Grotesk:wght@300;700&display=swap');
+
+:root {
+    --ritus-accent: #6366f1;
+    --ritus-dark: #0F172A;
+    --font-gilroy: 'Lexend', sans-serif;
+}
+
+body { 
+    font-family: 'Inter', sans-serif; 
+    background: #F8FAFC; 
+    color: var(--ritus-dark); 
+    margin: 0; 
+    overflow-x: hidden;
+}
+
+.heading-font { font-family: 'Space Grotesk', sans-serif; }
+.logo-font { font-family: var(--font-gilroy); font-weight: 800; letter-spacing: -0.02em; text-transform: uppercase; }
+
+.sidebar { background: var(--ritus-dark); transition: width 0.2s ease; z-index: 50; }
+
+.card { 
+    border-radius: 1.5rem; background: white; padding: 1.5rem; 
+    border: 1px solid #F1F5F9; transition: all 0.2s ease;
+    will-change: transform;
+}
+.card:hover { transform: translateY(-4px); box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.05); }
+
+#loader { 
+    position: fixed; inset: 0; background: var(--ritus-dark); z-index: 9999; 
+    display: flex; flex-direction: column; align-items: center; justify-content: center; 
+    color: white; transition: opacity 0.4s ease; 
+}
+.loader-spinner {
+    width: 40px; height: 40px; border: 3px solid var(--ritus-accent); 
+    border-top-color: transparent; border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1.5rem;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.fade-out { opacity: 0; pointer-events: none; }
+
+.nav-item { 
+    display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; 
+    border-radius: 0.75rem; margin-bottom: 0.5rem; cursor: pointer; 
+    font-size: 11px; font-weight: 800; text-transform: uppercase; 
+    letter-spacing: 0.1em; transition: all 0.2s; 
+}
+.nav-active { background: var(--ritus-accent); color: white; box-shadow: 0 8px 12px -3px rgba(99, 102, 241, 0.3); }
+.nav-inactive { color: #94a3b8; }
+.nav-inactive:hover { background: rgba(255,255,255,0.05); color: white; }
+
+input, select { 
+    border-radius: 1rem; padding: 1rem 1.25rem; border: 2px solid #F1F5F9; 
+    outline: none; font-weight: 700; width: 100%;
+}
+
+.badge-cat { font-size: 8px; font-weight: 900; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; }
+
+.modal-overlay { 
+    position: fixed; inset: 0; background: rgba(15, 23, 42, 0.85); 
+    backdrop-filter: blur(4px); z-index: 100; display: flex; 
+    align-items: center; justify-content: center; padding: 1.5rem; 
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.animate-content { animation: slideUp 0.3s ease-out forwards; }
