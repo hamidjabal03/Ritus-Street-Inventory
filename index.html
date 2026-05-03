@@ -4,27 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ritus Street Inventory</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://www.gstatic.com">
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 </head>
 <body>
+    <!-- Loading Screen -->
     <div id="loader">
         <div class="loader-spinner"></div>
         <p class="logo-font text-white text-lg tracking-[0.2em]">RITUS STREET</p>
     </div>
 
+    <!-- Root App -->
     <div id="root"></div>
 
-    <!-- Load scripts in order -->
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-app.js" type="module"></script>
-    <script src="firebase-config.js" type="module"></script>
+    <!-- 1. React Libraries -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- 2. Firebase Config (Harus type="module") -->
+    <script src="firebase-config.js" type="module"></script>
+
+    <!-- 3. Main Logic (Harus type="text/babel") -->
     <script src="App.js" type="text/babel"></script>
 </body>
 </html>
