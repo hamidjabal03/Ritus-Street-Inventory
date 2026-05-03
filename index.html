@@ -47,12 +47,22 @@
             }, 500);
             return () => clearInterval(check);
         }, []);
-
         const handleLogin = async (e) => {
             e.preventDefault();
-            if (!window.RitusLoginFunc) {
-                setError("Sistem belum siap, tunggu sebentar...");
-                return;
+            setStatus(prev => ({ ...prev, loading: true }));
+            setError('');
+            
+            try {
+                await window.RitusLoginFunc(window.RitusAuth, inputs.email.trim(), inputs.pass);
+                console.log("Login Sukses!");
+            } catch (err) {
+                console.error("KODE ERROR ASLI:", err.code);
+                // Menampilkan kode error asli ke layar biar kita tahu penyakitnya
+                setError("ERROR: " + err.code); 
+            } finally {
+                setStatus(prev => ({ ...prev, loading: false }));
+            }
+        };
             }
 
             setStatus(prev => ({ ...prev, loading: true }));
