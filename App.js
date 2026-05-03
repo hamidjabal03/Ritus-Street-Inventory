@@ -1,5 +1,25 @@
-const { useState, useEffect, useRef, useMemo, memo } = React;
-Chart.register(ChartDataLabels);
+const { useState, useEffect, useRef, useMemo } = React;
+
+const App = () => {
+  // Tambahkan state loading internal
+  const [isDbReady, setIsDbReady] = useState(false);
+
+  useEffect(() => {
+    // Cek apakah RitusDB sudah tersedia di window
+    const checkDb = setInterval(() => {
+      if (window.RitusDB) {
+        setIsDbReady(true);
+        clearInterval(checkDb);
+      }
+    }, 100);
+    return () => clearInterval(checkDb);
+  }, []);
+
+  if (!isDbReady) return null; // Jangan render apa pun sampai DB siap
+
+  // ... sisa kode App Anda (handleLogin, useEffect auth, dll)
+  // Ganti pemanggilan window.RitusDB menjadi variabel lokal agar lebih aman
+  const { auth, db, onAuthStateChanged } = window.RitusDB;
 
 // Icons & Components
 const Icons = {
