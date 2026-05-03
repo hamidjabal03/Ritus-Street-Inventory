@@ -1,8 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, addDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-// Pastikan ini adalah kode ASLI dari Firebase Console Anda
 const firebaseConfig = {
   apiKey: "AIzaSyB2xfDX5PU_nP5TEPSYFL6xmBcS0wZrj_c",
   authDomain: "ritus-street-inventory.firebaseapp.com",
@@ -17,18 +16,19 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// Sediakan data untuk App.js
 window.RitusDB = { 
     db, auth, collection, doc, onSnapshot, addDoc, setDoc, getDoc, 
     signInWithEmailAndPassword, signOut, onAuthStateChanged 
 };
 
-// Fungsi ini akan menghilangkan loader setelah semua library termuat
+// Pastikan loader hilang hanya setelah data siap
 window.addEventListener('load', () => {
     const loader = document.getElementById('loader');
     if (loader) {
         setTimeout(() => {
             loader.classList.add('fade-out');
             setTimeout(() => loader.remove(), 400);
-        }, 1500); // Memberi jeda sedikit untuk proses rendering React
+        }, 1500);
     }
 });
