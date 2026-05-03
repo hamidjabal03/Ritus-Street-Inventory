@@ -4,25 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ritus Street Inventory</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-[#0f172a] text-slate-400">
-
-    <!-- Indikator Render -->
-    <div id="root">
-        <div class="min-h-screen flex items-center justify-center">
-            <div class="text-center">
-                <div class="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
-                <p id="status-text" class="text-xs font-mono tracking-widest uppercase">System Initializing...</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Load Libraries secara sekuensial -->
+    
+    <!-- 1. Load Library Utama Duluan -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- 2. Firebase SDK & Config -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
         import { getAuth } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
@@ -36,71 +25,79 @@
             appId: "1:249697895281:web:c44bccdd16958c9d28ecd0"
         };
 
-        try {
-            const app = initializeApp(firebaseConfig);
-            window.RitusAuth = getAuth(app);
-            window.FirebaseReady = true;
-            console.log("Firebase Connected");
-        } catch (e) {
-            console.error("Firebase Error:", e);
-        }
+        const app = initializeApp(firebaseConfig);
+        window.RitusAuth = getAuth(app);
+        window.FirebaseReady = true;
     </script>
+</head>
+<body class="bg-[#0f172a] text-white">
 
+    <!-- Container Utama -->
+    <div id="root">
+        <div style="display: flex; height: 100vh; align-items: center; justify-content: center;">
+            <div style="text-align: center;">
+                <p style="font-family: monospace; font-size: 12px; letter-spacing: 2px;">WAKING UP RITUS SYSTEM...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Logika React (Internal Script) -->
     <script type="text/babel">
         const { useState, useEffect } = React;
 
         function App() {
-            const [isReady, setIsReady] = useState(false);
+            const [ready, setReady] = useState(false);
             const [user, setUser] = useState(null);
-            const [email, setEmail] = useState("");
-            const [password, setPassword] = useState("");
-            const [error, setError] = useState("");
+            const [creds, setCreds] = useState({ email: '', pass: '' });
 
             useEffect(() => {
-                const timer = setInterval(() => {
+                const check = setInterval(() => {
                     if (window.FirebaseReady && window.RitusAuth) {
-                        setIsReady(true);
+                        setReady(true);
                         window.RitusAuth.onAuthStateChanged(u => setUser(u));
-                        clearInterval(timer);
+                        clearInterval(check);
                     }
                 }, 500);
-                return () => clearInterval(timer);
+                return () => clearInterval(check);
             }, []);
 
-            const login = async (e) => {
+            const doLogin = async (e) => {
                 e.preventDefault();
-                setError("");
                 try {
                     const { signInWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js");
-                    await signInWithEmailAndPassword(window.RitusAuth, email, password);
-                } catch (err) {
-                    setError("Invalid Credentials");
-                }
+                    await signInWithEmailAndPassword(window.RitusAuth, creds.email, creds.pass);
+                } catch (err) { alert("Akses Ditolak!"); }
             };
 
-            if (!isReady) return null; // Biarkan loading HTML bawaan yang tampil
+            if (!ready) return null;
 
             return (
-                <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
-                    <div className="w-full max-w-sm bg-slate-900 border border-white/5 p-8 rounded-3xl shadow-2xl">
-                        <h1 className="text-2xl font-bold text-white text-center mb-1">RITUS STREET</h1>
-                        <p className="text-[10px] text-blue-500 text-center tracking-[0.3em] mb-8 uppercase">Authorized Access</p>
-                        
-                        {error && <div className="mb-4 text-center text-red-500 text-xs bg-red-500/10 py-2 rounded-lg border border-red-500/20">{error}</div>}
-                        
-                        <form onSubmit={login} className="space-y-4">
-                            <input type="email" placeholder="Email" onChange={e => setEmail(e.target.value)} className="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-white outline-none focus:border-blue-500" required />
-                            <input type="password" placeholder="Password" onChange={e => setPassword(e.target.value)} className="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-white outline-none focus:border-blue-500" required />
-                            <button className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-600/20">LOGIN</button>
-                        </form>
-                    </div>
+                <div className="min-h-screen flex items-center justify-center bg-slate-950 p-6 font-sans">
+                    {user ? (
+                        <div className="text-center border border-white/10 p-10 rounded-3xl bg-slate-900 shadow-2xl">
+                            <h1 className="text-2xl font-bold mb-2">SISTEM AKTIF</h1>
+                            <p className="text-slate-500 mb-8">{user.email}</p>
+                            <button onClick={() => window.RitusAuth.signOut()} className="bg-red-500/10 text-red-500 border border-red-500/20 px-8 py-2 rounded-xl hover:bg-red-500 hover:text-white transition-all">LOGOUT</button>
+                        </div>
+                    ) : (
+                        <div className="w-full max-w-sm bg-slate-900 border border-white/5 p-8 rounded-[2rem] shadow-2xl">
+                            <div className="text-center mb-8">
+                                <h2 className="text-3xl font-black tracking-tighter italic">RITUS STREET</h2>
+                                <div className="h-1 w-12 bg-blue-600 mx-auto mt-1 rounded-full"></div>
+                            </div>
+                            
+                            <form onSubmit={doLogin} className="space-y-4">
+                                <input type="email" placeholder="Email" onChange={e => setCreds({...creds, email: e.target.value})} className="w-full bg-slate-800 border border-slate-700 p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" required />
+                                <input type="password" placeholder="Password" onChange={e => setCreds({...creds, pass: e.target.value})} className="w-full bg-slate-800 border border-slate-700 p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" required />
+                                <button className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-bold tracking-widest shadow-lg shadow-blue-600/20 active:scale-95 transition-all">ACCESS DASHBOARD</button>
+                            </form>
+                        </div>
+                    )}
                 </div>
             );
         }
 
-        // Final Mounting
-        const rootElement = document.getElementById('root');
-        const root = ReactDOM.createRoot(rootElement);
+        const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
 </body>
