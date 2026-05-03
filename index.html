@@ -1,153 +1,143 @@
-<!-- 1. Firebase SDK Loader -->
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ritus Street Inventory</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#020617] text-white">
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyB2xfDX5PU_nP5TEPSYFL6xmBcS0wZrj_c",
-        authDomain: "ritus-street-inventory.firebaseapp.com",
-        projectId: "ritus-street-inventory",
-        storageBucket: "ritus-street-inventory.firebasestorage.app",
-        messagingSenderId: "249697895281",
-        appId: "1:249697895281:web:c44bccdd16958c9d28ecd0"
-    };
-
-    try {
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-
-        // Pasang langsung ke window agar React bisa baca
-        window.RitusAuth = auth;
-        window.RitusLoginFunc = signInWithEmailAndPassword; // PENTING: Penamaan harus jelas
-        window.RitusLogoutFunc = signOut;
-        window.FirebaseReady = true;
-        console.log("Firebase Engine Ready!");
-    } catch (e) {
-        console.error("Firebase Init Error:", e);
-    }
-</script>
-
-<!-- 2. React Logic -->
-<script type="text/babel">
-    const { useState, useEffect } = React;
-
-    function App() {
-        const [status, setStatus] = useState({ ready: false, loading: false });
-        const [user, setUser] = useState(null);
-        const [inputs, setInputs] = useState({ email: '', pass: '' });
-        const [error, setError] = useState('');
-
-        useEffect(() => {
-            const check = setInterval(() => {
-                if (window.FirebaseReady && window.RitusAuth) {
-                    window.RitusAuth.onAuthStateChanged(u => setUser(u));
-                    setStatus(prev => ({ ...prev, ready: true }));
-                    clearInterval(check);
-                }
-            }, 500);
-            return () => clearInterval(check);
-        }, []);
-        const handleLogin = async (e) => {
-            e.preventDefault();
-            setStatus(prev => ({ ...prev, loading: true }));
-            setError('');
-            
-            try {
-                await window.RitusLoginFunc(window.RitusAuth, inputs.email.trim(), inputs.pass);
-                console.log("Login Sukses!");
-            } catch (err) {
-                console.error("KODE ERROR ASLI:", err.code);
-                // Menampilkan kode error asli ke layar biar kita tahu penyakitnya
-                setError("ERROR: " + err.code); 
-            } finally {
-                setStatus(prev => ({ ...prev, loading: false }));
-            }
-        };
-            }
-
-            setStatus(prev => ({ ...prev, loading: true }));
-            setError('');
-            
-            try {
-                // Panggil fungsi login yang sudah dipasang di window
-                await window.RitusLoginFunc(window.RitusAuth, inputs.email, inputs.pass);
-            } catch (err) {
-                console.error("Login Failed:", err.code);
-                // Mapping error biar lebih informatif
-                if (err.code === 'auth/invalid-credential') {
-                    setError("Email atau Password salah.");
-                } else if (err.code === 'auth/network-request-failed') {
-                    setError("Masalah jaringan. Cek koneksi.");
-                } else {
-                    setError("Akses Ditolak.");
-                }
-            } finally {
-                setStatus(prev => ({ ...prev, loading: false }));
-            }
-        };
-
-        if (!status.ready) return null;
-
-        return (
-            <div className="min-h-screen flex items-center justify-center p-6 bg-[#020617]">
-                {user ? (
-                    <div className="w-full max-w-md p-10 rounded-[2.5rem] bg-slate-900 border border-white/10 text-center shadow-2xl">
-                        <div className="mb-6 inline-flex p-4 bg-green-500/10 rounded-full border border-green-500/20">
-                            <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                        </div>
-                        <h1 className="text-2xl font-bold text-white mb-2">Sistem Aktif</h1>
-                        <p className="text-slate-400 text-sm mb-8">{user.email}</p>
-                        <button 
-                            onClick={() => window.RitusLogoutFunc(window.RitusAuth)} 
-                            className="w-full py-4 rounded-2xl bg-white/5 hover:bg-red-500/10 hover:text-red-500 border border-white/10 font-bold transition-all"
-                        >
-                            KELUAR
-                        </button>
-                    </div>
-                ) : (
-                    <div className="w-full max-w-sm">
-                        <div className="text-center mb-10">
-                            <h2 className="text-4xl font-black italic text-white tracking-tighter">RITUS STREET</h2>
-                            <p className="text-blue-500 text-[10px] tracking-[0.4em] font-bold uppercase mt-2">Inventory System</p>
-                        </div>
-
-                        <div className="bg-slate-900/50 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/10 shadow-2xl">
-                            {error && (
-                                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-[11px] font-bold text-center uppercase tracking-widest animate-pulse">
-                                    {error}
-                                </div>
-                            )}
-                            <form onSubmit={handleLogin} className="space-y-4">
-                                <input 
-                                    type="email" 
-                                    placeholder="Admin Email" 
-                                    onChange={e => setInputs({...inputs, email: e.target.value})} 
-                                    className="w-full bg-slate-800/50 border border-white/5 p-4 rounded-2xl text-white outline-none focus:border-blue-500 transition-all" 
-                                    required 
-                                />
-                                <input 
-                                    type="password" 
-                                    placeholder="Security Code" 
-                                    onChange={e => setInputs({...inputs, pass: e.target.value})} 
-                                    className="w-full bg-slate-800/50 border border-white/5 p-4 rounded-2xl text-white outline-none focus:border-blue-500 transition-all" 
-                                    required 
-                                />
-                                <button 
-                                    disabled={status.loading} 
-                                    className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-black text-xs tracking-widest text-white transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50"
-                                >
-                                    {status.loading ? 'VERIFYING...' : 'LOGIN SYSTEM'}
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                )}
+    <div id="root">
+        <!-- Tampilan Cadangan jika React Gagal -->
+        <div class="min-h-screen flex items-center justify-center">
+            <div class="text-center">
+                <div class="w-8 h-8 border-2 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+                <p class="text-[10px] tracking-[0.3em] text-slate-500 uppercase">Booting Ritus System...</p>
             </div>
-        );
-    }
+        </div>
+    </div>
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-</script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB2xfDX5PU_nP5TEPSYFL6xmBcS0wZrj_c",
+            authDomain: "ritus-street-inventory.firebaseapp.com",
+            projectId: "ritus-street-inventory",
+            storageBucket: "ritus-street-inventory.firebasestorage.app",
+            messagingSenderId: "249697895281",
+            appId: "1:249697895281:web:c44bccdd16958c9d28ecd0"
+        };
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            window.RitusAuth = getAuth(app);
+            window.RitusLogin = signInWithEmailAndPassword;
+            window.RitusLogout = signOut;
+            window.FirebaseReady = true;
+        } catch (e) {
+            console.error("Firebase Error:", e);
+        }
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function App() {
+            const [isReady, setIsReady] = useState(false);
+            const [user, setUser] = useState(null);
+            const [email, setEmail] = useState('');
+            const [pass, setPass] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+
+            useEffect(() => {
+                const check = setInterval(() => {
+                    if (window.FirebaseReady && window.RitusAuth) {
+                        window.RitusAuth.onAuthStateChanged(u => setUser(u));
+                        setIsReady(true);
+                        clearInterval(check);
+                    }
+                }, 500);
+                return () => clearInterval(check);
+            }, []);
+
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                setError('');
+                try {
+                    await window.RitusLogin(window.RitusAuth, email.trim(), pass);
+                } catch (err) {
+                    console.error("Error Detail:", err.code);
+                    // Menampilkan kode error asli agar kita bisa diagnosa
+                    setError("CODE: " + err.code);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            if (!isReady) return null;
+
+            return (
+                <div className="min-h-screen flex items-center justify-center p-6 bg-[#020617] font-sans">
+                    {user ? (
+                        <div className="w-full max-w-md p-10 rounded-[2.5rem] bg-slate-900 border border-white/10 text-center shadow-2xl">
+                            <h1 className="text-2xl font-bold text-white mb-2">SISTEM AKTIF</h1>
+                            <p className="text-slate-400 text-sm mb-8">{user.email}</p>
+                            <button onClick={() => window.RitusLogout(window.RitusAuth)} className="w-full py-4 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 font-bold hover:bg-red-500 hover:text-white transition-all">KELUAR</button>
+                        </div>
+                    ) : (
+                        <div className="w-full max-w-sm">
+                            <div className="text-center mb-10">
+                                <h2 className="text-4xl font-black italic text-white tracking-tighter">RITUS STREET</h2>
+                                <p className="text-blue-500 text-[10px] tracking-[0.4em] font-bold uppercase mt-2">Inventory Management</p>
+                            </div>
+
+                            <div className="bg-slate-900/80 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/10 shadow-2xl">
+                                {error && (
+                                    <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-[10px] font-bold text-center uppercase tracking-widest leading-relaxed">
+                                        {error === "CODE: auth/operation-not-allowed" 
+                                            ? "ERROR: METODE LOGIN BELUM DIAKTIFKAN DI FIREBASE" 
+                                            : error}
+                                    </div>
+                                )}
+                                <form onSubmit={handleLogin} className="space-y-4">
+                                    <input 
+                                        type="email" 
+                                        placeholder="Admin Email" 
+                                        onChange={e => setEmail(e.target.value)} 
+                                        className="w-full bg-slate-800/50 border border-white/5 p-4 rounded-2xl text-white outline-none focus:border-blue-500 transition-all placeholder:text-slate-600" 
+                                        required 
+                                    />
+                                    <input 
+                                        type="password" 
+                                        placeholder="Security Code" 
+                                        onChange={e => setPass(e.target.value)} 
+                                        className="w-full bg-slate-800/50 border border-white/5 p-4 rounded-2xl text-white outline-none focus:border-blue-500 transition-all placeholder:text-slate-600" 
+                                        required 
+                                    />
+                                    <button 
+                                        disabled={loading} 
+                                        className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-black text-xs tracking-widest text-white transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50"
+                                    >
+                                        {loading ? 'VERIFYING...' : 'LOGIN SYSTEM'}
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
