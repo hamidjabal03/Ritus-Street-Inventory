@@ -4,30 +4,87 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ritus Street Inventory</title>
-    <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .fade-out { opacity: 0; pointer-events: none; }
+    </style>
 </head>
-<body class="bg-[#0f172a]">
+<body class="bg-[#0f172a] text-white">
+    <!-- Loader -->
     <div id="loader" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#0f172a] transition-opacity duration-500">
         <div class="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-4"></div>
-        <p class="text-white font-bold tracking-[0.3em] text-sm">RITUS STREET</p>
+        <p class="font-bold tracking-[0.3em]">RITUS STREET</p>
     </div>
 
+    <!-- Tempat Aplikasi Muncul -->
     <div id="root"></div>
-    
-    <!-- 1. Libraries -->
+
+    <!-- 1. Muat Library Utama -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- 2. Firebase Config -->
+    <!-- 2. Muat Firebase Config (Tetap dari file luar) -->
     <script src="firebase-config.js" type="module"></script>
 
-    <!-- 3. App Logic -->
-    <script type="text/babel" data-type="module">
-        // Kita langsung panggil file App.js di sini agar Babel pasti memprosesnya
-        import './App.js';
+    <!-- 3. Langsung Tulis Logika di Sini (Untuk Tes) -->
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const App = () => {
+            const [ready, setReady] = useState(false);
+            const [user, setUser] = useState(null);
+
+            useEffect(() => {
+                const checkDB = setInterval(() => {
+                    if (window.RitusDB) {
+                        setReady(true);
+                        const { auth, onAuthStateChanged } = window.RitusDB;
+                        onAuthStateChanged(auth, (u) => setUser(u));
+                        
+                        // Hilangkan loader setelah 1 detik
+                        setTimeout(() => {
+                            document.getElementById('loader').classList.add('fade-out');
+                        }, 1000);
+                        
+                        clearInterval(checkDB);
+                    }
+                }, 100);
+                return () => clearInterval(checkDB);
+            }, []);
+
+            if (!ready) return null;
+
+            return (
+                <div className="min-h-screen flex items-center justify-center p-4">
+                    {user ? (
+                        <div className="bg-slate-800 p-8 rounded-lg text-center border border-slate-700">
+                            <h1 className="text-2xl font-bold mb-4">Sistem Berhasil Dimuat!</h1>
+                            <p className="text-slate-400">Anda login sebagai: {user.email}</p>
+                            <button 
+                                onClick={() => window.RitusDB.signOut(window.RitusDB.auth)}
+                                className="mt-6 bg-red-500 px-6 py-2 rounded hover:bg-red-600 transition"
+                            >
+                                Keluar
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="bg-slate-800 p-8 rounded-xl shadow-2xl border border-slate-700 w-full max-w-md">
+                            <h2 className="text-2xl font-bold text-center mb-2">Admin Login</h2>
+                            <p className="text-center text-slate-400 text-sm mb-6">Inventory Management System</p>
+                            <div className="space-y-4">
+                                <input type="email" placeholder="Email" className="w-full bg-slate-900 border border-slate-700 p-3 rounded focus:outline-none focus:border-blue-500" />
+                                <input type="password" placeholder="Password" className="w-full bg-slate-900 border border-slate-700 p-3 rounded focus:outline-none focus:border-blue-500" />
+                                <button className="w-full bg-blue-600 py-3 rounded font-bold hover:bg-blue-700 transition">MASUK</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
-   
