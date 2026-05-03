@@ -8,25 +8,16 @@ const firebaseConfig = {
   projectId: "ritus-street-inventory",
   storageBucket: "ritus-street-inventory.firebasestorage.app",
   messagingSenderId: "249697895281",
-  appId: "1:249697895281:web:c44bccdd16958c9d28ecd0"
+  appId: "1:249697895281:web:c44bccdd16958c9d28ecd0",
+  measurementId: "G-MMTVPVB24E"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Simpan ke window agar App.js bisa mengaksesnya
+// Simpan ke window agar bisa diakses index.html
 window.RitusDB = { 
     db, auth, collection, doc, onSnapshot, addDoc, setDoc, getDoc, query, orderBy,
     signInWithEmailAndPassword, signOut, onAuthStateChanged 
 };
-
-window.addEventListener('load', () => {
-    const loader = document.getElementById('loader');
-    if (loader) {
-        setTimeout(() => {
-            loader.style.opacity = '0';
-            setTimeout(() => loader.remove(), 500);
-        }, 1500);
-    }
-});
