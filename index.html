@@ -8,15 +8,13 @@
 </head>
 <body class="bg-[#0f172a] text-white">
 
-    <!-- Indikator Status -->
-    <div id="status-debug" class="fixed top-2 left-2 bg-red-600 text-[10px] p-1 rounded z-[9999]">
-        Status: Memuat Library...
-    </div>
-
-    <div id="root" class="min-h-screen flex items-center justify-center">
-        <div id="loading-ui" class="text-center">
-            <div class="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
-            <p class="text-slate-400">Menghubungkan ke Database...</p>
+    <div id="root">
+        <!-- Tampilan Loading Awal -->
+        <div class="min-h-screen flex items-center justify-center">
+            <div class="text-center">
+                <div class="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+                <p class="text-slate-400 animate-pulse">Menghubungkan ke Ritus System...</p>
+            </div>
         </div>
     </div>
 
@@ -25,54 +23,72 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 
-    <!-- 2. Config -->
-    <script src="firebase-config.js" type="module"></script>
+    <!-- 2. Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-    <!-- 3. Logic -->
+        const firebaseConfig = {
+            apiKey: "AIzaSyB2xfDX5PU_nP5TEPSYFL6xmBcS0wZrj_c",
+            authDomain: "ritus-street-inventory.firebaseapp.com",
+            projectId: "ritus-street-inventory",
+            storageBucket: "ritus-street-inventory.firebasestorage.app",
+            messagingSenderId: "249697895281",
+            appId: "1:249697895281:web:c44bccdd16958c9d28ecd0",
+            measurementId: "G-MMTVPVB24E"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        window.RitusAuth = getAuth(app);
+        window.RitusDB = getFirestore(app);
+        window.FirebaseReady = true;
+    </script>
+
+    <!-- 3. Logic Aplikasi -->
     <script type="text/babel">
         const { useState, useEffect } = React;
 
         function App() {
-            const [isReady, setIsReady] = useState(false);
+            const [isLoaded, setIsLoaded] = useState(false);
+            const [user, setUser] = useState(null);
 
             useEffect(() => {
-                const debug = document.getElementById('status-debug');
-                debug.innerText = "Status: Script Ok, Menunggu window.RitusDB...";
-                debug.style.backgroundColor = "orange";
-
-                const checker = setInterval(() => {
-                    if (window.RitusDB) {
-                        debug.innerText = "Status: Firebase Terhubung!";
-                        debug.style.backgroundColor = "green";
-                        setIsReady(true);
-                        clearInterval(checker);
-                        
-                        // Sembunyikan debug setelah sukses
-                        setTimeout(() => debug.style.display = 'none', 3000);
+                const checkFirebase = setInterval(() => {
+                    if (window.FirebaseReady) {
+                        setIsLoaded(true);
+                        // Cek status login
+                        import("https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js").then((authMod) => {
+                            authMod.onAuthStateChanged(window.RitusAuth, (u) => setUser(u));
+                        });
+                        clearInterval(checkFirebase);
                     }
                 }, 500);
-                return () => clearInterval(checker);
+                return () => clearInterval(checkFirebase);
             }, []);
 
-            if (!isReady) return null;
+            if (!isLoaded) return (
+                <div class="min-h-screen flex items-center justify-center">
+                    <div class="text-center">
+                        <div class="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+                        <p class="text-slate-500">Syncing Data...</p>
+                    </div>
+                </div>
+            );
 
             return (
-                <div className="bg-slate-800 p-8 rounded-xl shadow-2xl border border-slate-700 w-full max-w-md animate-in fade-in zoom-in duration-500">
-                    <h2 className="text-2xl font-bold text-center mb-1">Ritus Street</h2>
-                    <p className="text-center text-slate-400 text-xs mb-8 uppercase tracking-widest">Inventory System</p>
-                    
-                    <div className="space-y-4">
-                        <div>
-                            <label className="text-xs text-slate-400 mb-1 block">Email Admin</label>
-                            <input type="email" placeholder="admin@ritus.com" className="w-full bg-slate-900 border border-slate-700 p-3 rounded text-white focus:border-blue-500 outline-none transition-all" />
+                <div className="min-h-screen flex items-center justify-center p-4">
+                    <div className="bg-slate-800 p-8 rounded-xl shadow-2xl border border-slate-700 w-full max-w-md">
+                        <h2 className="text-2xl font-bold text-center mb-2">Ritus Street</h2>
+                        <p className="text-center text-slate-400 text-xs mb-8 uppercase tracking-widest font-mono">Inventory Access</p>
+                        
+                        <div className="space-y-4">
+                            <input type="email" placeholder="Email Admin" className="w-full bg-slate-900 border border-slate-700 p-3 rounded focus:border-blue-500 outline-none transition-all" />
+                            <input type="password" placeholder="Password" className="w-full bg-slate-900 border border-slate-700 p-3 rounded focus:border-blue-500 outline-none transition-all" />
+                            <button className="w-full bg-blue-600 py-3 rounded font-bold hover:bg-blue-700 transition active:scale-95">
+                                LOGIN SYSTEM
+                            </button>
                         </div>
-                        <div>
-                            <label className="text-xs text-slate-400 mb-1 block">Password</label>
-                            <input type="password" placeholder="••••••••" className="w-full bg-slate-900 border border-slate-700 p-3 rounded text-white focus:border-blue-500 outline-none transition-all" />
-                        </div>
-                        <button className="w-full bg-blue-600 py-3 rounded font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-900/20 active:scale-[0.98]">
-                            MASUK KE DASHBOARD
-                        </button>
                     </div>
                 </div>
             );
