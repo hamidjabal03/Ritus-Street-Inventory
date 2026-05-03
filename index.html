@@ -1,4 +1,4 @@
-<!-- Bagian Firebase SDK (Ganti yang lama) -->
+<!-- 1. Firebase SDK Loader -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
@@ -12,33 +12,36 @@
         appId: "1:249697895281:web:c44bccdd16958c9d28ecd0"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
+    try {
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
 
-    // Kirim fungsi ke window agar bisa dipakai React
-    window.RitusAuth = auth;
-    window.RitusLogin = signInWithEmailAndPassword;
-    window.RitusSignOut = signOut;
-    window.FirebaseReady = true;
+        // Pasang langsung ke window agar React bisa baca
+        window.RitusAuth = auth;
+        window.RitusLoginFunc = signInWithEmailAndPassword; // PENTING: Penamaan harus jelas
+        window.RitusLogoutFunc = signOut;
+        window.FirebaseReady = true;
+        console.log("Firebase Engine Ready!");
+    } catch (e) {
+        console.error("Firebase Init Error:", e);
+    }
 </script>
 
-<!-- Bagian React Logic (Ganti yang lama) -->
+<!-- 2. React Logic -->
 <script type="text/babel">
     const { useState, useEffect } = React;
 
     function App() {
-        const [ready, setReady] = useState(false);
+        const [status, setStatus] = useState({ ready: false, loading: false });
         const [user, setUser] = useState(null);
-        const [email, setEmail] = useState('');
-        const [pass, setPass] = useState('');
-        const [loading, setLoading] = useState(false);
+        const [inputs, setInputs] = useState({ email: '', pass: '' });
         const [error, setError] = useState('');
 
         useEffect(() => {
             const check = setInterval(() => {
-                if (window.FirebaseReady) {
+                if (window.FirebaseReady && window.RitusAuth) {
                     window.RitusAuth.onAuthStateChanged(u => setUser(u));
-                    setReady(true);
+                    setStatus(prev => ({ ...prev, ready: true }));
                     clearInterval(check);
                 }
             }, 500);
@@ -47,51 +50,85 @@
 
         const handleLogin = async (e) => {
             e.preventDefault();
-            setLoading(true);
+            if (!window.RitusLoginFunc) {
+                setError("Sistem belum siap, tunggu sebentar...");
+                return;
+            }
+
+            setStatus(prev => ({ ...prev, loading: true }));
             setError('');
             
             try {
-                // Memanggil fungsi login yang sudah kita siapkan di window
-                await window.RitusLogin(window.RitusAuth, email, pass);
+                // Panggil fungsi login yang sudah dipasang di window
+                await window.RitusLoginFunc(window.RitusAuth, inputs.email, inputs.pass);
             } catch (err) {
-                console.error("Login Error Code:", err.code);
-                // Penjelasan error yang lebih detail untuk diagnosa
-                if (err.code === 'auth/network-request-failed') {
-                    setError("Masalah koneksi/Domain belum di-Authorized.");
-                } else {
+                console.error("Login Failed:", err.code);
+                // Mapping error biar lebih informatif
+                if (err.code === 'auth/invalid-credential') {
                     setError("Email atau Password salah.");
+                } else if (err.code === 'auth/network-request-failed') {
+                    setError("Masalah jaringan. Cek koneksi.");
+                } else {
+                    setError("Akses Ditolak.");
                 }
             } finally {
-                setLoading(false);
+                setStatus(prev => ({ ...prev, loading: false }));
             }
         };
 
-        if (!ready) return null;
+        if (!status.ready) return null;
 
         return (
-            <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
+            <div className="min-h-screen flex items-center justify-center p-6 bg-[#020617]">
                 {user ? (
                     <div className="w-full max-w-md p-10 rounded-[2.5rem] bg-slate-900 border border-white/10 text-center shadow-2xl">
-                        <h1 className="text-2xl font-bold text-white mb-2">Akses Diterima</h1>
+                        <div className="mb-6 inline-flex p-4 bg-green-500/10 rounded-full border border-green-500/20">
+                            <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <h1 className="text-2xl font-bold text-white mb-2">Sistem Aktif</h1>
                         <p className="text-slate-400 text-sm mb-8">{user.email}</p>
-                        <button onClick={() => window.RitusSignOut(window.RitusAuth)} className="w-full py-4 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 font-bold hover:bg-red-500 hover:text-white transition-all">LOGOUT</button>
+                        <button 
+                            onClick={() => window.RitusLogoutFunc(window.RitusAuth)} 
+                            className="w-full py-4 rounded-2xl bg-white/5 hover:bg-red-500/10 hover:text-red-500 border border-white/10 font-bold transition-all"
+                        >
+                            KELUAR
+                        </button>
                     </div>
                 ) : (
                     <div className="w-full max-w-sm">
-                        <div className="text-center mb-8">
-                            <h2 className="text-3xl font-black italic text-white tracking-tighter">RITUS STREET</h2>
+                        <div className="text-center mb-10">
+                            <h2 className="text-4xl font-black italic text-white tracking-tighter">RITUS STREET</h2>
+                            <p className="text-blue-500 text-[10px] tracking-[0.4em] font-bold uppercase mt-2">Inventory System</p>
                         </div>
-                        <div className="bg-slate-900 p-8 rounded-[2rem] border border-white/10 shadow-2xl">
+
+                        <div className="bg-slate-900/50 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/10 shadow-2xl">
                             {error && (
-                                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-[11px] font-bold text-center uppercase tracking-widest">
+                                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-[11px] font-bold text-center uppercase tracking-widest animate-pulse">
                                     {error}
                                 </div>
                             )}
                             <form onSubmit={handleLogin} className="space-y-4">
-                                <input type="email" placeholder="Email Admin" onChange={e => setEmail(e.target.value)} className="w-full bg-slate-800 border border-white/5 p-4 rounded-2xl text-white outline-none focus:border-blue-500" required />
-                                <input type="password" placeholder="Password" onChange={e => setPass(e.target.value)} className="w-full bg-slate-800 border border-white/5 p-4 rounded-2xl text-white outline-none focus:border-blue-500" required />
-                                <button disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-bold text-white transition-all shadow-lg shadow-blue-600/20">
-                                    {loading ? 'AUTHENTICATING...' : 'ACCESS SYSTEM'}
+                                <input 
+                                    type="email" 
+                                    placeholder="Admin Email" 
+                                    onChange={e => setInputs({...inputs, email: e.target.value})} 
+                                    className="w-full bg-slate-800/50 border border-white/5 p-4 rounded-2xl text-white outline-none focus:border-blue-500 transition-all" 
+                                    required 
+                                />
+                                <input 
+                                    type="password" 
+                                    placeholder="Security Code" 
+                                    onChange={e => setInputs({...inputs, pass: e.target.value})} 
+                                    className="w-full bg-slate-800/50 border border-white/5 p-4 rounded-2xl text-white outline-none focus:border-blue-500 transition-all" 
+                                    required 
+                                />
+                                <button 
+                                    disabled={status.loading} 
+                                    className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-black text-xs tracking-widest text-white transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50"
+                                >
+                                    {status.loading ? 'VERIFYING...' : 'LOGIN SYSTEM'}
                                 </button>
                             </form>
                         </div>
