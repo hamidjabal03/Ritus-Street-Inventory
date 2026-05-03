@@ -4,26 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ritus Street Inventory</title>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-[#0f172a]">
+<body class="bg-[#0f172a] text-slate-400">
 
-    <!-- ELEMEN INI HARUS ADA -->
-    <div id="root"></div>
+    <!-- Indikator Render -->
+    <div id="root">
+        <div class="min-h-screen flex items-center justify-center">
+            <div class="text-center">
+                <div class="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+                <p id="status-text" class="text-xs font-mono tracking-widest uppercase">System Initializing...</p>
+            </div>
+        </div>
+    </div>
 
-    <!-- 1. LIBRARIES (Urutan sangat penting) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <!-- Load Libraries secara sekuensial -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- 2. FIREBASE SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
         import { getAuth } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB2xfDX5PU_nP5TEPSYFL6xmBcS0wZrj_c",
@@ -34,113 +36,71 @@
             appId: "1:249697895281:web:c44bccdd16958c9d28ecd0"
         };
 
-        const app = initializeApp(firebaseConfig);
-        window.RitusAuth = getAuth(app);
-        window.RitusDB = getFirestore(app);
-        window.FirebaseReady = true;
+        try {
+            const app = initializeApp(firebaseConfig);
+            window.RitusAuth = getAuth(app);
+            window.FirebaseReady = true;
+            console.log("Firebase Connected");
+        } catch (e) {
+            console.error("Firebase Error:", e);
+        }
     </script>
 
-    <!-- 3. LOGIC APLIKASI -->
     <script type="text/babel">
         const { useState, useEffect } = React;
 
         function App() {
-            const [isLoaded, setIsLoaded] = useState(false);
+            const [isReady, setIsReady] = useState(false);
             const [user, setUser] = useState(null);
             const [email, setEmail] = useState("");
             const [password, setPassword] = useState("");
-            const [loading, setLoading] = useState(false);
-            const [errorMessage, setErrorMessage] = useState("");
+            const [error, setError] = useState("");
 
             useEffect(() => {
-                const checkFirebase = setInterval(() => {
-                    if (window.FirebaseReady) {
-                        setIsLoaded(true);
-                        window.RitusAuth.onAuthStateChanged((u) => setUser(u));
-                        clearInterval(checkFirebase);
+                const timer = setInterval(() => {
+                    if (window.FirebaseReady && window.RitusAuth) {
+                        setIsReady(true);
+                        window.RitusAuth.onAuthStateChanged(u => setUser(u));
+                        clearInterval(timer);
                     }
                 }, 500);
-                return () => clearInterval(checkFirebase);
+                return () => clearInterval(timer);
             }, []);
 
-            const handleLogin = async (e) => {
+            const login = async (e) => {
                 e.preventDefault();
-                setLoading(true);
-                setErrorMessage("");
-                
+                setError("");
                 try {
                     const { signInWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js");
                     await signInWithEmailAndPassword(window.RitusAuth, email, password);
-                } catch (error) {
-                    setErrorMessage("Akses ditolak. Periksa kembali email & password.");
-                } finally {
-                    setLoading(false);
+                } catch (err) {
+                    setError("Invalid Credentials");
                 }
             };
 
-            if (!isLoaded) return (
-                <div className="min-h-screen flex items-center justify-center bg-[#0f172a]">
-                    <div className="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-                </div>
-            );
+            if (!isReady) return null; // Biarkan loading HTML bawaan yang tampil
 
             return (
-                <div className="min-h-screen flex items-center justify-center p-4 bg-slate-950 font-['Inter',sans-serif]">
-                    {user ? (
-                        <div className="bg-white/10 backdrop-blur-xl p-10 rounded-2xl border border-white/10 text-center max-w-sm w-full">
-                            <h2 className="text-2xl font-bold text-white mb-2">Sistem Aktif</h2>
-                            <p className="text-slate-400 mb-8 text-sm">{user.email}</p>
-                            <button onClick={() => window.RitusAuth.signOut()} className="w-full bg-red-500/20 hover:bg-red-500/40 text-red-400 py-3 rounded-xl font-semibold border border-red-500/30 transition-all">
-                                LOGOUT
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="w-full max-w-md">
-                            <div className="text-center mb-8">
-                                <h1 className="text-4xl font-extrabold text-white tracking-tighter">RITUS STREET</h1>
-                                <p className="text-blue-500 uppercase tracking-[0.3em] text-[10px] font-bold">Inventory System</p>
-                            </div>
-
-                            <div className="bg-slate-900/50 p-8 rounded-3xl border border-white/5 shadow-2xl">
-                                {errorMessage && (
-                                    <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
-                                        <p className="text-red-400 text-xs text-center font-medium">{errorMessage}</p>
-                                    </div>
-                                )}
-
-                                <form onSubmit={handleLogin} className="space-y-5">
-                                    <input 
-                                        type="email" 
-                                        placeholder="Admin Email" 
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        className="w-full bg-slate-800 border border-slate-700 p-4 rounded-2xl outline-none text-white focus:border-blue-500 transition-all" 
-                                        required
-                                    />
-                                    <input 
-                                        type="password" 
-                                        placeholder="Password" 
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full bg-slate-800 border border-slate-700 p-4 rounded-2xl outline-none text-white focus:border-blue-500 transition-all" 
-                                        required
-                                    />
-                                    <button 
-                                        type="submit"
-                                        disabled={loading}
-                                        className="w-full py-4 rounded-2xl font-bold bg-blue-600 hover:bg-blue-500 text-white transition-all disabled:opacity-50"
-                                    >
-                                        {loading ? 'MENGECEK...' : 'MASUK KE SISTEM'}
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    )}
+                <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
+                    <div className="w-full max-w-sm bg-slate-900 border border-white/5 p-8 rounded-3xl shadow-2xl">
+                        <h1 className="text-2xl font-bold text-white text-center mb-1">RITUS STREET</h1>
+                        <p className="text-[10px] text-blue-500 text-center tracking-[0.3em] mb-8 uppercase">Authorized Access</p>
+                        
+                        {error && <div className="mb-4 text-center text-red-500 text-xs bg-red-500/10 py-2 rounded-lg border border-red-500/20">{error}</div>}
+                        
+                        <form onSubmit={login} className="space-y-4">
+                            <input type="email" placeholder="Email" onChange={e => setEmail(e.target.value)} className="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-white outline-none focus:border-blue-500" required />
+                            <input type="password" placeholder="Password" onChange={e => setPassword(e.target.value)} className="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-white outline-none focus:border-blue-500" required />
+                            <button className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-600/20">LOGIN</button>
+                        </form>
+                    </div>
                 </div>
             );
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
+        // Final Mounting
+        const rootElement = document.getElementById('root');
+        const root = ReactDOM.createRoot(rootElement);
         root.render(<App />);
     </script>
 </body>
