@@ -19,15 +19,15 @@
     <!-- Root App -->
     <div id="root"></div>
 
-    <!-- 1. React Libraries -->
+<!-- 1. Muat React & Babel -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- 2. Firebase Config (Harus type="module") -->
+    <!-- 2. Muat Config Firebase (PENTING: Harus type="module") -->
     <script src="firebase-config.js" type="module"></script>
 
-    <!-- 3. Main Logic (Harus type="text/babel") -->
-    <script src="App.js" type="text/babel"></script>
+    <!-- 3. Muat Logika Utama (UBAH ke type="module" juga agar sinkron) -->
+    <script src="App.js" type="module"></script>
 </body>
 </html>
