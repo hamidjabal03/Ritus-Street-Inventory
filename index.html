@@ -3,89 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ritus Street Inventory</title>
+    <title>Ritus Street Inventory - Secure Access</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js for Dashboards -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #F8FAFC; color: #0F172A; margin: 0; }
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;800;900&family=Inter:wght@400;700;900&family=Space+Grotesk:wght@300;700&display=swap');
         
-        .sidebar { background: #0F172A; color: white; transition: all 0.3s ease; z-index: 50; }
-        .card { border-radius: 1.5rem; background: white; padding: 2rem; border: 1px solid #F1F5F9; transition: all 0.3s ease; }
-        .card:hover { transform: translateY(-3px); box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.05); }
+        :root {
+            --ritus-accent: #6366f1;
+            --ritus-dark: #0F172A;
+            --font-gilroy: 'Lexend', sans-serif;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: #F8FAFC; 
+            color: var(--ritus-dark); 
+            margin: 0; 
+            overflow-x: hidden;
+        }
+
+        .heading-font { font-family: 'Space Grotesk', sans-serif; }
         
-        #loader {
-            position: fixed; inset: 0; background: #0F172A; z-index: 9999;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: white; transition: opacity 0.4s ease;
+        .logo-font { 
+            font-family: var(--font-gilroy);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+        }
+
+        .sidebar { background: var(--ritus-dark); color: white; transition: all 0.3s ease; z-index: 50; }
+        
+        .card { 
+            border-radius: 1.5rem; 
+            background: white; 
+            padding: 1.5rem; 
+            border: 1px solid #F1F5F9; 
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05); }
+
+        #loader { 
+            position: fixed; inset: 0; background: var(--ritus-dark); z-index: 9999; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            color: white; transition: opacity 0.6s ease; 
         }
         .fade-out { opacity: 0; pointer-events: none; }
-        
+
         .nav-item { 
             display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; 
-            border-radius: 0.75rem; margin-bottom: 0.5rem; cursor: pointer;
-            font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;
-            transition: all 0.2s;
+            border-radius: 0.75rem; margin-bottom: 0.5rem; cursor: pointer; 
+            font-size: 11px; font-weight: 800; text-transform: uppercase; 
+            letter-spacing: 0.1em; transition: all 0.3s; 
         }
-        .nav-active { background: #6366f1; color: white; }
+        .nav-active { 
+            background: var(--ritus-accent); color: white; 
+            box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3); 
+            transform: scale(1.05);
+        }
         .nav-inactive { color: #94a3b8; }
         .nav-inactive:hover { background: rgba(255,255,255,0.05); color: white; }
 
-        input, select { border-radius: 0.75rem; padding: 0.75rem 1rem; border: 1px solid #E2E8F0; outline: none; font-weight: 700; font-style: italic; width: 100%; }
-        input:focus { border-color: #6366f1; }
+        input, select { 
+            border-radius: 1rem; padding: 1rem 1.25rem; border: 2px solid #F1F5F9; 
+            outline: none; font-weight: 700; font-style: italic; width: 100%; 
+            appearance: none; background-color: white; transition: all 0.2s;
+        }
+        input:focus { border-color: var(--ritus-accent); background: white; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1); }
+
+        .badge-cat { font-size: 8px; font-weight: 900; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
         
-        .category-card {
-            cursor: pointer;
-            border: 2px solid transparent;
-            transition: all 0.2s;
+        .modal-overlay { 
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.9); 
+            backdrop-filter: blur(8px); z-index: 100; display: flex; 
+            align-items: center; justify-content: center; padding: 1.5rem; 
         }
-        .category-card:hover { border-color: #6366f1; background: #f5f3ff; }
 
-        .filter-btn {
-            padding: 0.5rem 1.25rem;
-            border-radius: 9999px;
-            font-size: 10px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            transition: all 0.2s;
-            border: 1px solid #E2E8F0;
+        .title-accent {
+            position: relative;
+            display: inline-block;
         }
-        .filter-btn-active { background: #0F172A; color: white; border-color: #0F172A; }
-        .filter-btn-inactive { background: white; color: #64748b; }
-        .filter-btn-inactive:hover { background: #F1F5F9; }
+        .title-accent::after {
+            content: '';
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            width: 100%;
+            height: 8px;
+            background: var(--ritus-accent);
+            opacity: 0.2;
+            z-index: -1;
+        }
 
-        @media (max-width: 768px) {
-            .sidebar { width: 100%; position: relative; height: auto; padding: 1rem; }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
+        .animate-content { animation: slideUp 0.5s ease forwards; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; }
     </style>
 </head>
 <body>
     <div id="loader">
-        <div style="width: 30px; height: 30px; border: 3px solid #6366f1; border-top-color: transparent; border-radius: 50%;" class="animate-spin mb-4"></div>
-        <p style="font-weight:900; font-style:italic; letter-spacing:0.3em; font-size: 10px;">RITUS CONNECTING...</p>
+        <div style="width: 40px; height: 40px; border: 4px solid var(--ritus-accent); border-top-color: transparent; border-radius: 50%;" class="animate-spin mb-6"></div>
+        <p class="logo-font text-white text-lg tracking-[0.2em]">RITUS STREET</p>
     </div>
 
     <div id="root"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, onSnapshot, writeBatch, addDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, onSnapshot, addDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        try {
-            const config = JSON.parse(__firebase_config || '{}');
-            const app = initializeApp(config);
-            const auth = getAuth(app);
-            const db = getFirestore(app);
-            window.RitusDB = { db, collection, doc, onSnapshot, writeBatch, addDoc, setDoc, getDoc, auth, signInAnonymously };
-        } catch (e) { console.error("Firebase Error"); }
+        const firebaseConfig = JSON.parse(__firebase_config || '{}');
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-        setTimeout(() => {
-            const l = document.getElementById('loader');
-            if(l) l.classList.add('fade-out');
-        }, 1200);
+        // Expose Firebase to global window for React
+        window.RitusDB = { 
+            db, auth, collection, doc, onSnapshot, addDoc, setDoc, getDoc, 
+            signInWithEmailAndPassword, signOut, onAuthStateChanged 
+        };
+
+        window.onload = () => {
+            setTimeout(() => {
+                document.getElementById('loader')?.classList.add('fade-out');
+            }, 1000);
+        };
     </script>
 
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -93,410 +142,613 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect, useRef, useMemo } = React;
+        Chart.register(ChartDataLabels);
 
         const Icons = {
-            Dashboard: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>,
-            Input: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"></path></svg>,
-            Search: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
-            History: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l3 3"></path><circle cx="12" cy="12" r="9"></circle></svg>,
-            Download: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>,
-            Trending: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+            Dashboard: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>,
+            Input: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"></path></svg>,
+            Search: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" x2="16.65" y2="21" y2="16.65"></line></svg>,
+            History: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 8v4l3 3"></path><circle cx="12" cy="12" r="9"></circle></svg>,
+            Alert: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-rose-500"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>,
+            X: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
+            Upload: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>,
+            Download: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>,
+            Logout: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>,
+            Lock: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
+            Apparel: () => (
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.62 1.96V7a2 2 0 002 2h2.62l.38 12a2 2 0 002 2h6a2 2 0 002-2l.38-12H20a2 2 0 002-2V5.42a2 2 0 00-1.62-1.96z"></path>
+                </svg>
+            ),
+            Kaleng: () => (
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="7" y="9" width="10" height="12" rx="2"></rect>
+                    <path d="M9 9V6a3 3 0 016 0v3"></path>
+                    <circle cx="12" cy="15" r="2"></circle>
+                    <path d="M12 3v3"></path>
+                </svg>
+            ),
+            Aksesoris: () => (
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 10a4 4 0 100-8 4 4 0 000 8z"></path>
+                    <path d="M12 10v12"></path>
+                    <path d="M9 16l3 3 3-3"></path>
+                    <path d="M8 22h8"></path>
+                </svg>
+            )
         };
 
-        const CategoryPieChart = ({ inventory }) => {
+        const PageHeader = ({ title, subtitle, icon }) => (
+            <header className="mb-12 animate-content">
+                <div className="flex items-center gap-4 mb-2">
+                    <div className="p-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-200">
+                        {icon}
+                    </div>
+                    <div>
+                        <h2 className="text-4xl font-black italic uppercase tracking-tighter heading-font title-accent">
+                            {title}
+                        </h2>
+                        <div className="flex items-center gap-2 mt-1">
+                            <span className="w-8 h-[2px] bg-indigo-600"></span>
+                            <p className="text-slate-400 font-bold italic uppercase text-[10px] tracking-widest">{subtitle}</p>
+                        </div>
+                    </div>
+                </div>
+            </header>
+        );
+
+        const PieChart = ({ data, title }) => {
+            const canvasRef = useRef(null);
             const chartRef = useRef(null);
-            const chartInstance = useRef(null);
 
             useEffect(() => {
-                if (chartInstance.current) chartInstance.current.destroy();
-                
-                const ctx = chartRef.current.getContext('2d');
-                const categories = ['Apparel', 'Aksesoris', 'Kaleng'];
-                const data = categories.map(cat => 
-                    inventory.filter(i => i.category === cat).reduce((sum, item) => sum + item.stock, 0)
-                );
-
-                chartInstance.current = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: categories,
-                        datasets: [{
-                            data: data,
-                            backgroundColor: ['#6366f1', '#f59e0b', '#10b981'],
-                            borderWidth: 0,
-                            hoverOffset: 10
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { position: 'bottom', labels: { font: { weight: 'bold', family: 'Inter' }, padding: 20 } }
+                if (canvasRef.current) {
+                    const ctx = canvasRef.current.getContext('2d');
+                    if (chartRef.current) chartRef.current.destroy();
+                    const labels = Object.keys(data);
+                    const values = Object.values(data);
+                    if (labels.length === 0) return;
+                    chartRef.current = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: values,
+                                backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#f43f5e', '#8b5cf6'],
+                                borderWidth: 8, borderColor: '#ffffff'
+                            }]
                         },
-                        cutout: '70%'
-                    }
-                });
-            }, [inventory]);
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'bottom', labels: { font: { size: 10, weight: 'bold', family: 'Inter' }, padding: 20, usePointStyle: true } },
+                                datalabels: {
+                                    color: '#fff', font: { weight: '900', size: 10 },
+                                    formatter: (val) => val + ' Pcs',
+                                    backgroundColor: (ctx) => ctx.dataset.backgroundColor[ctx.dataIndex],
+                                    borderRadius: 6, padding: 6
+                                }
+                            },
+                            cutout: '75%'
+                        }
+                    });
+                }
+            }, [data]);
 
-            return <canvas ref={chartRef}></canvas>;
+            return (
+                <div className="card h-full flex flex-col items-center">
+                    <h4 className="text-[10px] font-black uppercase italic text-slate-400 mb-8 tracking-[0.3em] heading-font border-b pb-2">{title}</h4>
+                    <div className="relative w-full h-[280px]">
+                        {Object.keys(data).length > 0 ? <canvas ref={canvasRef}></canvas> : <div className="h-full flex items-center justify-center text-[10px] font-bold text-slate-300 uppercase italic">No Data</div>}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span className="text-3xl font-black italic heading-font">{Object.values(data).reduce((a, b) => a + b, 0)}</span>
+                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">PCS TOTAL</span>
+                        </div>
+                    </div>
+                </div>
+            );
         };
 
         function App() {
+            const [user, setUser] = useState(null);
+            const [isAuthenticating, setIsAuthenticating] = useState(true);
             const [inventory, setInventory] = useState([]);
             const [transactions, setTransactions] = useState([]);
             const [tab, setTab] = useState('dashboard');
-            const [searchQuery, setSearchQuery] = useState('');
-            const [outQty, setOutQty] = useState({});
             const [selectedCategory, setSelectedCategory] = useState(null);
-            const [filterCategory, setFilterCategory] = useState('Semua');
-            
+            const [filterCategoryInv, setFilterCategoryInv] = useState('Semua');
+            const [filterCategoryLog, setFilterCategoryLog] = useState('Semua');
+            const [searchQuery, setSearchQuery] = useState('');
+            const [toast, setToast] = useState(null);
+            const [confirmDialog, setConfirmDialog] = useState(null);
+            const [outAmount, setOutAmount] = useState(""); 
+            const [loginData, setLoginData] = useState({ email: '', password: '' });
+            const [loginError, setLoginError] = useState('');
+
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'ritus-street-v1';
 
-            const categories = ['Semua', 'Apparel', 'Aksesoris', 'Kaleng'];
-
             useEffect(() => {
-                if (window.RitusDB) {
-                    const { auth, signInAnonymously, db, collection, onSnapshot } = window.RitusDB;
-                    signInAnonymously(auth).then(() => {
-                        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'inventory'), (s) => {
-                            setInventory(s.docs.map(d => ({id: d.id, ...d.data()})));
-                        });
-                        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'transactions'), (s) => {
-                            setTransactions(s.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)));
-                        });
-                    });
-                }
+                const { onAuthStateChanged, auth } = window.RitusDB;
+                const unsub = onAuthStateChanged(auth, (u) => {
+                    setUser(u);
+                    setIsAuthenticating(false);
+                });
+                return () => unsub();
             }, []);
 
-            const getTopSoldItems = () => {
-                const sales = {};
-                transactions.filter(t => t.type === 'out').forEach(t => {
-                    sales[t.itemName] = (sales[t.itemName] || 0) + t.amount;
-                });
-                return Object.entries(sales)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 10);
+            useEffect(() => {
+                if (!user) return;
+                const { db, collection, onSnapshot } = window.RitusDB;
+                const unsubInv = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'inventory'), 
+                    (s) => setInventory(s.docs.map(d => ({id: d.id, ...d.data()}))),
+                    (e) => console.error("Inv Snapshot Error:", e));
+                const unsubTrans = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'transactions'), 
+                    (s) => setTransactions(s.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp))),
+                    (e) => console.error("Trans Snapshot Error:", e));
+                return () => { unsubInv(); unsubTrans(); };
+            }, [user]);
+
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setLoginError('');
+                const { auth, signInWithEmailAndPassword } = window.RitusDB;
+                try {
+                    await signInWithEmailAndPassword(auth, loginData.email, loginData.password);
+                } catch (error) {
+                    setLoginError('Email atau Password salah.');
+                }
             };
 
-            const downloadCSV = () => {
-                const headers = ['Tanggal,Nama Stok,Kategori,Tipe,Jumlah'];
-                // Only download filtered data
-                const targetData = transactions.filter(t => filterCategory === 'Semua' || t.category === filterCategory);
-                const rows = targetData.map(t => {
-                    const date = new Date(t.timestamp).toLocaleDateString('id-ID');
-                    return `${date},${t.itemName},${t.category || '-'},${t.type === 'in' ? 'MASUK' : 'KELUAR'},${t.amount}`;
+            const handleLogout = async () => {
+                const { auth, signOut } = window.RitusDB;
+                await signOut(auth);
+                setTab('dashboard');
+            };
+
+            const showToast = (msg) => {
+                setToast({ msg });
+                setTimeout(() => setToast(null), 3000);
+            };
+
+            const saveItemToCloud = async (name, size, category, amount, type, date) => {
+                if (!user || isNaN(amount) || amount <= 0) return false;
+                const { db, doc, setDoc, addDoc, collection, getDoc } = window.RitusDB;
+                const docId = `${name.toLowerCase().trim().replace(/\s+/g, '-')}-${size.toLowerCase().trim().replace(/\s+/g, '-')}`;
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'inventory', docId);
+                    const docSnap = await getDoc(docRef);
+                    let currentStock = docSnap.exists() ? (docSnap.data().stock || 0) : 0;
+                    const val = parseInt(amount);
+                    const isOut = type.toLowerCase() === 'out';
+                    const newStock = isOut ? currentStock - val : currentStock + val;
+                    if (newStock < 0) { showToast("Stok tidak mencukupi!"); return false; }
+                    await setDoc(docRef, { name, size, category, stock: Math.max(0, newStock), lastUpdated: new Date().toISOString() }, { merge: true });
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'transactions'), {
+                        itemName: `${name} (${size})`, type: isOut ? 'out' : 'in', category, amount: val, timestamp: date ? new Date(date).toISOString() : new Date().toISOString()
+                    });
+                    return true;
+                } catch (e) { return false; }
+            };
+
+            const handleCSVUpload = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    const text = event.target.result;
+                    const rows = text.split('\n').filter(row => row.trim() !== "").slice(1);
+                    let successCount = 0;
+                    for (const row of rows) {
+                        const cols = row.split(';');
+                        if (cols.length >= 6) {
+                            const [date, name, size, cat, type, qty] = cols;
+                            if (name && qty) {
+                                const ok = await saveItemToCloud(name, size || '-', cat || 'Lainnya', qty, type, date);
+                                if (ok) successCount++;
+                            }
+                        }
+                    }
+                    showToast(`${successCount} data diimpor!`);
+                };
+                reader.readAsText(file);
+            };
+
+            const exportToCSV = () => {
+                let csvContent = "data:text/csv;charset=utf-8,Waktu;Produk;Tipe;Kategori;Jumlah\n";
+                const filteredForExport = transactions.filter(t => filterCategoryLog === 'Semua' || t.category === filterCategoryLog);
+                filteredForExport.forEach(t => {
+                    csvContent += `${new Date(t.timestamp).toLocaleString()};${t.itemName};${t.type.toUpperCase()};${t.category};${t.amount}\n`;
                 });
-                
-                const csvContent = headers.concat(rows).join('\n');
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.setAttribute('href', url);
-                link.setAttribute('download', `rekap_ritus_${filterCategory}_${new Date().toISOString().split('T')[0]}.csv`);
-                link.style.visibility = 'hidden';
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `Rekapan_${filterCategoryLog}_${new Date().toLocaleDateString()}.csv`);
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
             };
 
-            const saveItemToCloud = async (name, size, category, amount, type, date) => {
-                const { db, doc, setDoc, addDoc, collection, getDoc } = window.RitusDB;
-                const id = `${name.toLowerCase().trim().replace(/\s+/g, '-')}-${size.toLowerCase().trim()}`;
-                
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'inventory', id);
-                const docSnap = await getDoc(docRef);
-                
-                let currentStock = 0;
-                if (docSnap.exists()) {
-                    currentStock = docSnap.data().stock || 0;
-                }
-
-                const transactionType = type.toLowerCase() === 'in' ? 'in' : 'out';
-                const finalAmount = parseInt(amount);
-                const newStock = transactionType === 'in' ? currentStock + finalAmount : currentStock - finalAmount;
-
-                await setDoc(docRef, {
-                    name: name.trim(),
-                    size: size.trim(),
-                    category: category,
-                    stock: newStock >= 0 ? newStock : 0
-                }, { merge: true });
-
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'transactions'), {
-                    itemName: `${name.trim()} (${size.trim()})`,
-                    type: transactionType,
-                    category: category,
-                    amount: finalAmount,
-                    timestamp: date ? new Date(date).toISOString() : new Date().toISOString()
+            const groupedInventory = useMemo(() => {
+                const apparelGroups = {};
+                const otherItems = [];
+                inventory.forEach(item => {
+                    if (item.category === 'Apparel') {
+                        if (!apparelGroups[item.name]) apparelGroups[item.name] = { name: item.name, category: 'Apparel', sizes: { S: 0, M: 0, L: 0, XL: 0, XXL: 0 }, id: item.id };
+                        if (apparelGroups[item.name].sizes.hasOwnProperty(item.size)) apparelGroups[item.name].sizes[item.size] = item.stock;
+                    } else otherItems.push(item);
                 });
-            };
+                return [...Object.values(apparelGroups), ...otherItems];
+            }, [inventory]);
 
-            const handleNewItem = async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                await saveItemToCloud(
-                    formData.get('name'),
-                    formData.get('size'),
-                    selectedCategory,
-                    formData.get('amount'),
-                    formData.get('type'),
-                    formData.get('date')
-                );
-                e.target.reset();
-                setSelectedCategory(null);
-            };
-
-            const handleQuickOut = async (item) => {
-                const amount = parseInt(outQty[item.id]) || 0;
-                if (amount <= 0 || amount > item.stock) return;
-                await saveItemToCloud(item.name, item.size, item.category, amount, 'out', null);
-                setOutQty({ ...outQty, [item.id]: '' });
-            };
-
-            // Main Inventory filtering
-            const filteredInventory = inventory.filter(i => {
-                const matchesSearch = i.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                                    i.category.toLowerCase().includes(searchQuery.toLowerCase());
-                const matchesCategory = filterCategory === 'Semua' || i.category === filterCategory;
-                return matchesSearch && matchesCategory;
+            const filteredInventory = groupedInventory.filter(item => {
+                const matchesCategory = filterCategoryInv === 'Semua' || item.category === filterCategoryInv;
+                const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+                return matchesCategory && matchesSearch;
             });
 
-            // Transactions filtering
-            const filteredTransactions = transactions.filter(t => 
-                filterCategory === 'Semua' || t.category === filterCategory
-            );
+            const filteredTransactions = transactions.filter(t => filterCategoryLog === 'Semua' || t.category === filterCategoryLog);
 
-            return (
-                <div className="flex flex-col md:flex-row min-h-screen">
-                    <aside className="sidebar w-full md:w-64 flex flex-col p-6 sticky top-0 h-auto md:h-screen shadow-2xl">
-                        <div className="mb-12">
-                            <h1 className="text-2xl font-black italic tracking-tighter leading-none text-indigo-400">RITUS</h1>
-                            <p className="text-[8px] font-black text-slate-500 tracking-[0.4em] uppercase mt-1">Management Cloud</p>
+            const { inStats, outStats } = useMemo(() => {
+                const i = {}; const o = {};
+                transactions.forEach(t => {
+                    const cat = t.category || 'Lainnya';
+                    if (t.type === 'in') i[cat] = (i[cat] || 0) + t.amount;
+                    else o[cat] = (o[cat] || 0) + t.amount;
+                });
+                return { inStats: i, outStats: o };
+            }, [transactions]);
+
+            const isOverStock = confirmDialog ? (parseInt(outAmount || 0) > confirmDialog.currentStock) : false;
+
+            // LOADING AUTH STATE
+            if (isAuthenticating) return null;
+
+            // LOGIN PAGE
+            if (!user) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-slate-900 p-6">
+                        <div className="max-w-md w-full bg-white rounded-[3rem] p-10 shadow-2xl animate-content">
+                            <div className="text-center mb-10">
+                                <h1 className="text-3xl text-slate-900 logo-font mb-2">RITUS STREET</h1>
+                                <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.4em]">ADMIN ACCESS</p>
+                            </div>
+                            
+                            <form onSubmit={handleLogin} className="space-y-6">
+                                <div>
+                                    <label className="text-[9px] font-black text-slate-400 uppercase ml-2 mb-2 block">EMAIL ADMIN</label>
+                                    <input 
+                                        type="email" 
+                                        required 
+                                        placeholder="admin@ritus.com"
+                                        value={loginData.email}
+                                        onChange={(e) => setLoginData({...loginData, email: e.target.value})}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[9px] font-black text-slate-400 uppercase ml-2 mb-2 block">PASSWORD</label>
+                                    <input 
+                                        type="password" 
+                                        required 
+                                        placeholder="••••••••"
+                                        value={loginData.password}
+                                        onChange={(e) => setLoginData({...loginData, password: e.target.value})}
+                                    />
+                                </div>
+                                
+                                {loginError && (
+                                    <p className="text-rose-500 text-[10px] font-black uppercase text-center italic">{loginError}</p>
+                                )}
+
+                                <button 
+                                    type="submit"
+                                    className="w-full bg-indigo-600 hover:bg-slate-900 text-white py-5 rounded-2xl font-black italic uppercase text-xs heading-font tracking-widest transition-all shadow-xl shadow-indigo-100 flex items-center justify-center gap-3"
+                                >
+                                    <Icons.Lock /> LOGIN KE SISTEM
+                                </button>
+                            </form>
+                            
+                            <p className="mt-8 text-center text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">
+                                SIALKAN HUBUNGI DEVELOPER UNTUK AKSES
+                            </p>
                         </div>
-                        
-                        <nav className="flex-1">
-                            <div onClick={() => { setTab('dashboard'); setFilterCategory('Semua'); }} className={`nav-item ${tab === 'dashboard' ? 'nav-active' : 'nav-inactive'}`}>
-                                <Icons.Dashboard /> Dashboard
+                    </div>
+                );
+            }
+
+            // MAIN APP PAGE
+            return (
+                <div className="flex flex-col md:flex-row min-h-screen relative">
+                    {confirmDialog && (
+                        <div className="modal-overlay">
+                            <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-2xl border-4 border-slate-900 relative">
+                                <button onClick={() => { setConfirmDialog(null); setOutAmount(""); }} className="absolute top-8 right-8 text-slate-300 hover:text-slate-900"><Icons.X /></button>
+                                <div className="flex justify-center mb-8"><div className={`p-5 rounded-3xl ${isOverStock ? 'bg-rose-100' : 'bg-indigo-50'}`}><Icons.Alert /></div></div>
+                                <h3 className="text-2xl font-black italic uppercase text-center mb-2 heading-font">PENGELUARAN</h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase text-center mb-8 tracking-widest"><span className="text-slate-900">{confirmDialog.name} ({confirmDialog.size})</span><br />STOK AKTIF: {confirmDialog.currentStock} PCS</p>
+                                <div className="text-center mb-10">
+                                    <input 
+                                        type="number" 
+                                        value={outAmount} 
+                                        placeholder="0"
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if(val === "" || parseInt(val) >= 0) setOutAmount(val);
+                                        }} 
+                                        className={`text-center text-6xl font-black italic border-none !bg-transparent heading-font focus:ring-0 ${isOverStock ? 'text-rose-500' : 'text-slate-900'}`} 
+                                        autoFocus 
+                                    />
+                                    {isOverStock && <p className="text-[10px] font-black text-rose-600 uppercase mt-4 italic">LIMIT TERLAMPAUI!</p>}
+                                </div>
+                                <div className="flex gap-4">
+                                    <button onClick={() => { setConfirmDialog(null); setOutAmount(""); }} className="flex-1 py-5 rounded-2xl font-black uppercase text-[11px] bg-slate-100 italic heading-font">BATAL</button>
+                                    <button 
+                                        onClick={() => {
+                                            const amt = parseInt(outAmount);
+                                            if (!isNaN(amt) && amt > 0 && !isOverStock) {
+                                                confirmDialog.action(amt);
+                                                setOutAmount("");
+                                            }
+                                        }} 
+                                        disabled={isOverStock || !outAmount || parseInt(outAmount) === 0} 
+                                        className={`flex-1 py-5 rounded-2xl font-black uppercase text-[11px] text-white italic heading-font transition-all ${isOverStock || !outAmount || parseInt(outAmount) === 0 ? 'bg-slate-300 cursor-not-allowed' : 'bg-indigo-600 hover:bg-slate-900 shadow-xl shadow-indigo-100'}`}
+                                    >
+                                        VERIFIKASI
+                                    </button>
+                                </div>
                             </div>
-                            <div onClick={() => {setTab('input'); setSelectedCategory(null);}} className={`nav-item ${tab === 'input' ? 'nav-active' : 'nav-inactive'}`}>
-                                <Icons.Input /> Input Stok
+                        </div>
+                    )}
+
+                    <aside className="sidebar w-full md:w-72 flex flex-col p-8 sticky top-0 h-auto md:h-screen border-r border-white/5">
+                        <div className="mb-14 px-2">
+                            <h1 className="text-3xl text-white logo-font leading-none">RITUS STREET</h1>
+                            <div className="flex items-center gap-2 mt-2">
+                                <span className="w-4 h-[2.5px] bg-indigo-500"></span>
+                                <p className="text-[8.5px] font-bold text-indigo-400 uppercase tracking-[0.4em]">OFFICIAL WAREHOUSE</p>
                             </div>
-                            <div onClick={() => { setTab('inventory'); setFilterCategory('Semua'); }} className={`nav-item ${tab === 'inventory' ? 'nav-active' : 'nav-inactive'}`}>
-                                <Icons.Search /> Daftar Stok
-                            </div>
-                            <div onClick={() => { setTab('history'); setFilterCategory('Semua'); }} className={`nav-item ${tab === 'history' ? 'nav-active' : 'nav-inactive'}`}>
-                                <Icons.History /> Riwayat Log
+                        </div>
+                        <nav className="flex-1 space-y-2">
+                            <div onClick={() => setTab('dashboard')} className={`nav-item ${tab === 'dashboard' ? 'nav-active' : 'nav-inactive'}`}><Icons.Dashboard /> Dashboard</div>
+                            <div onClick={() => setTab('input')} className={`nav-item ${tab === 'input' ? 'nav-active' : 'nav-inactive'}`}><Icons.Input /> Input Stok</div>
+                            <div onClick={() => setTab('inventory')} className={`nav-item ${tab === 'inventory' ? 'nav-active' : 'nav-inactive'}`}><Icons.Search /> Daftar Stok</div>
+                            <div onClick={() => setTab('history')} className={`nav-item ${tab === 'history' ? 'nav-active' : 'nav-inactive'}`}><Icons.History /> Riwayat Log</div>
+                            
+                            <div onClick={handleLogout} className="nav-item text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 mt-10">
+                                <Icons.Logout /> Logout
                             </div>
                         </nav>
-                        
-                        <div className="mt-auto pt-6 border-t border-slate-800 text-[9px] font-black text-slate-600 uppercase italic">
-                            System v2.5 • Live Analytics
+                        <div className="mt-auto pt-10 px-2 border-t border-white/5">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-indigo-400 font-black italic uppercase">
+                                    {user.email ? user.email[0] : 'A'}
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-white uppercase italic truncate max-w-[120px]">{user.email || 'ADMIN'}</p>
+                                    <p className="text-[8px] font-bold text-slate-500 uppercase">SECURE SESSION</p>
+                                </div>
+                            </div>
                         </div>
                     </aside>
 
-                    <main className="flex-1 p-6 md:p-12 overflow-y-auto bg-slate-50">
+                    <main className="flex-1 p-8 md:p-14 overflow-y-auto">
                         {tab === 'dashboard' && (
-                            <div className="animate-in fade-in duration-500">
-                                <h2 className="text-3xl font-black italic tracking-tighter mb-8 uppercase">Ikhtisar Gudang</h2>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                                    <div className="card bg-indigo-600 text-white border-0 shadow-lg shadow-indigo-200">
-                                        <p className="text-[10px] font-black opacity-60 uppercase italic mb-2">Total Unit Tersedia</p>
-                                        <h2 className="text-6xl font-black italic tracking-tighter">{inventory.reduce((a,b) => a + (b.stock || 0), 0)}</h2>
-                                    </div>
-                                    <div className="card">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase italic mb-2">Keluar (Hari Ini)</p>
-                                        <h2 className="text-6xl font-black italic tracking-tighter text-rose-500">
-                                            {transactions.filter(t => t.type === 'out' && new Date(t.timestamp).toDateString() === new Date().toDateString()).reduce((a,b) => a + b.amount, 0)}
-                                        </h2>
-                                    </div>
-                                    <div className="card">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase italic mb-2">Total Log Aktivitas</p>
-                                        <h2 className="text-6xl font-black italic tracking-tighter text-slate-900">{transactions.length}</h2>
+                            <div className="max-w-6xl mx-auto">
+                                <PageHeader title="DASHBOARD" subtitle="RINGKASAN ARUS BARANG REAL-TIME" icon={<Icons.Dashboard />} />
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 animate-content">
+                                    <div className="card bg-white border-2 border-slate-100"><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Varian Produk</p><h3 className="text-5xl font-black italic mt-2 heading-font text-indigo-600">{inventory.length}</h3></div>
+                                    <div className="card bg-slate-900 text-white"><p className="text-[10px] font-black uppercase opacity-40 tracking-widest">Total Stok</p><h3 className="text-5xl font-black italic mt-2 heading-font text-indigo-400">{inventory.reduce((a, b) => a + (b.stock || 0), 0)}</h3></div>
+                                    <div className="card md:col-span-2 bg-indigo-600 text-white flex justify-between items-center shadow-2xl shadow-indigo-100">
+                                        <div><p className="text-[10px] font-black opacity-60 uppercase tracking-widest">AKTIVITAS TERAKHIR</p><p className="text-xl font-black italic mt-2 uppercase heading-font tracking-tight">{transactions[0]?.itemName || 'TIDAK ADA DATA'}</p></div>
+                                        <div className="text-white/20"><Icons.History /></div>
                                     </div>
                                 </div>
-
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    <div className="card flex flex-col items-center">
-                                        <h3 className="text-sm font-black uppercase italic mb-6 self-start flex items-center gap-2">
-                                            <div className="w-2 h-2 bg-indigo-500 rounded-full"></div> Distribusi Kategori
-                                        </h3>
-                                        <div className="w-full h-64">
-                                            <CategoryPieChart inventory={inventory} />
-                                        </div>
-                                    </div>
-
-                                    <div className="card flex flex-col">
-                                        <h3 className="text-sm font-black uppercase italic mb-6 flex items-center gap-2">
-                                            <Icons.Trending /> 10 Stok Terlaris (Keluar)
-                                        </h3>
-                                        <div className="space-y-4 flex-1">
-                                            {getTopSoldItems().length > 0 ? getTopSoldItems().map(([name, qty], idx) => (
-                                                <div key={idx} className="flex items-center justify-between group">
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-[10px] font-black text-slate-300 italic w-4">#{idx+1}</span>
-                                                        <span className="font-bold uppercase text-xs text-slate-700 truncate max-w-[200px]">{name}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="h-1 bg-slate-100 rounded-full w-24 hidden md:block overflow-hidden">
-                                                            <div 
-                                                                className="h-full bg-indigo-500 rounded-full" 
-                                                                style={{ width: `${(qty / getTopSoldItems()[0][1]) * 100}%` }}
-                                                            ></div>
-                                                        </div>
-                                                        <span className="font-black italic text-indigo-600 text-sm">{qty} PCS</span>
-                                                    </div>
-                                                </div>
-                                            )) : (
-                                                <div className="flex flex-col items-center justify-center h-full text-slate-300 italic text-[10px] uppercase font-black">Belum ada data transaksi keluar</div>
-                                            )}
-                                        </div>
-                                    </div>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 animate-content" style={{animationDelay: '0.2s'}}>
+                                    <PieChart data={inStats} title="DISTRIBUSI BARANG MASUK" />
+                                    <PieChart data={outStats} title="DISTRIBUSI BARANG KELUAR" />
                                 </div>
                             </div>
                         )}
 
                         {tab === 'input' && (
-                            <div className="max-w-3xl animate-in slide-in-from-bottom-4 duration-500">
-                                <h2 className="text-3xl font-black italic tracking-tighter uppercase mb-8">Pendaftaran Stok</h2>
+                            <div className="max-w-2xl mx-auto">
+                                <div className="flex justify-between items-center mb-12 animate-content">
+                                    <PageHeader title="INPUT STOK" subtitle="TAMBAH DATA BARANG SECARA MANUAL" icon={<Icons.Input />} />
+                                    <label htmlFor="csv-input" className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase italic cursor-pointer hover:bg-indigo-600 transition-all shadow-xl"><Icons.Upload /> IMPORT CSV</label>
+                                    <input type="file" accept=".csv" onChange={handleCSVUpload} className="hidden" id="csv-input" />
+                                </div>
                                 {!selectedCategory ? (
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        {['Apparel', 'Aksesoris', 'Kaleng'].map(cat => (
-                                            <div key={cat} onClick={() => setSelectedCategory(cat)} className="card category-card p-10 flex flex-col items-center justify-center text-center">
-                                                <h3 className="font-black italic uppercase text-lg">{cat}</h3>
+                                    <div className="grid grid-cols-1 gap-4 animate-content">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-4 text-center">PILIH KATEGORI PRODUK</p>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <div onClick={() => setSelectedCategory('Apparel')} className="card p-10 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 border-2 border-transparent bg-white shadow-sm hover:shadow-indigo-50 transition-all">
+                                                <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-6">
+                                                    <Icons.Apparel />
+                                                </div>
+                                                <h3 className="font-black italic uppercase heading-font text-lg tracking-tighter">Apparel</h3>
                                             </div>
-                                        ))}
+                                            <div onClick={() => setSelectedCategory('Kaleng')} className="card p-10 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 border-2 border-transparent bg-white shadow-sm hover:shadow-indigo-50 transition-all">
+                                                <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-6">
+                                                    <Icons.Kaleng />
+                                                </div>
+                                                <h3 className="font-black italic uppercase heading-font text-lg tracking-tighter">Kaleng</h3>
+                                            </div>
+                                            <div onClick={() => setSelectedCategory('Aksesoris')} className="card p-10 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 border-2 border-transparent bg-white shadow-sm hover:shadow-indigo-50 transition-all">
+                                                <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-6">
+                                                    <Icons.Aksesoris />
+                                                </div>
+                                                <h3 className="font-black italic uppercase heading-font text-lg tracking-tighter">Aksesoris</h3>
+                                            </div>
+                                        </div>
                                     </div>
                                 ) : (
-                                    <form onSubmit={handleNewItem} className="card space-y-6">
-                                        <button type="button" onClick={() => setSelectedCategory(null)} className="text-[10px] font-black uppercase text-indigo-500 italic">← Ganti Kategori ({selectedCategory})</button>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <input name="name" required placeholder="Nama Stok / Produk" />
-                                            <input name="size" required placeholder="Ukuran / Info Detail" />
+                                    <form onSubmit={async (e) => { e.preventDefault(); const fd = new FormData(e.target); if(selectedCategory === 'Apparel') { for(let s of ['S','M','L','XL','XXL']) { let q = fd.get(`qty_${s}`); if(q > 0) await saveItemToCloud(fd.get('name'), s, 'Apparel', q, fd.get('type'), fd.get('date')); } } else { await saveItemToCloud(fd.get('name'), fd.get('size'), selectedCategory, fd.get('amount'), fd.get('type'), fd.get('date')); } showToast("DATA TERSIMPAN!"); e.target.reset(); setSelectedCategory(null); setTab('inventory'); }} className="card space-y-6 border-2 border-slate-900 animate-content p-10">
+                                        <div className="flex justify-between items-center pb-6 border-b-2 border-slate-50 mb-4">
+                                            <button type="button" onClick={() => setSelectedCategory(null)} className="text-[11px] font-black uppercase text-indigo-600 italic hover:tracking-widest transition-all">← KEMBALI</button>
+                                            <span className="text-[11px] font-black uppercase bg-slate-900 text-white px-6 py-2 rounded-xl heading-font italic tracking-widest">{selectedCategory}</span>
                                         </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                            <select name="type"><option value="in">MASUK (+)</option><option value="out">KELUAR (-)</option></select>
-                                            <input name="amount" type="number" required placeholder="Jumlah" min="1" />
-                                            <input name="date" type="date" required defaultValue={new Date().toISOString().split('T')[0]} />
+                                        <div>
+                                            <label className="text-[9px] font-black text-slate-400 uppercase ml-2 mb-2 block">NAMA ARTIKEL / PRODUK</label>
+                                            <input name="name" required placeholder="Contoh: Ritus Street Black Tees" />
                                         </div>
-                                        <button type="submit" className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black italic uppercase">Proses Transaksi Stok</button>
+                                        <div className="grid grid-cols-2 gap-6">
+                                            <div>
+                                                <label className="text-[9px] font-black text-slate-400 uppercase ml-2 mb-2 block">TIPE TRANSAKSI</label>
+                                                <select name="type"><option value="in">MASUK (+)</option><option value="out">KELUAR (-)</option></select>
+                                            </div>
+                                            <div>
+                                                <label className="text-[9px] font-black text-slate-400 uppercase ml-2 mb-2 block">TANGGAL</label>
+                                                <input name="date" type="date" required defaultValue={new Date().toISOString().split('T')[0]} />
+                                            </div>
+                                        </div>
+                                        {selectedCategory === 'Apparel' ? (
+                                            <div>
+                                                <label className="text-[9px] font-black text-slate-400 uppercase ml-2 mb-4 block text-center tracking-widest">KUANTITAS PER UKURAN</label>
+                                                <div className="grid grid-cols-5 gap-3 bg-slate-50 p-6 rounded-2xl border-2 border-dashed border-slate-200">{['S','M','L','XL','XXL'].map(s => <div key={s} className="text-center"><label className="text-[10px] font-black mb-2 block text-indigo-600">{s}</label><input name={`qty_${s}`} type="number" placeholder="0" className="!p-3 text-center text-xs font-black rounded-lg" /></div>)}</div>
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-2 gap-6">
+                                                <div>
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase ml-2 mb-2 block">INFO / WARNA</label>
+                                                    <input name="size" required placeholder="Contoh: Black / Silver" />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[9px] font-black text-slate-400 uppercase ml-2 mb-2 block">QTY</label>
+                                                    <input name="amount" type="number" required placeholder="0" />
+                                                </div>
+                                            </div>
+                                        )}
+                                        <button type="submit" className="w-full bg-indigo-600 hover:bg-slate-900 text-white py-5 rounded-2xl font-black italic uppercase text-xs heading-font tracking-widest transition-all shadow-xl shadow-indigo-100">SIMPAN KE CLOUD</button>
                                     </form>
                                 )}
                             </div>
                         )}
 
                         {tab === 'inventory' && (
-                            <div className="animate-in fade-in duration-500">
-                                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
-                                    <div>
-                                        <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-tight mb-2">Daftar Stok</h2>
-                                        <div className="flex flex-wrap gap-2">
-                                            {categories.map(cat => (
-                                                <button 
-                                                    key={cat} 
-                                                    onClick={() => setFilterCategory(cat)}
-                                                    className={`filter-btn ${filterCategory === cat ? 'filter-btn-active' : 'filter-btn-inactive'}`}
-                                                >
-                                                    {cat}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="relative w-full lg:w-64">
-                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                                            <Icons.Search />
-                                        </div>
-                                        <input className="pl-12" placeholder="Cari artikel..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                            <div className="max-w-6xl mx-auto">
+                                <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 mb-12 animate-content">
+                                    <PageHeader title="DAFTAR STOK" subtitle="MANAJEMEN PERSEDIAAN BARANG" icon={<Icons.Search />} />
+                                    <div className="flex flex-wrap gap-3 bg-white p-2 rounded-2xl border shadow-sm">
+                                        {['Semua', 'Apparel', 'Aksesoris', 'Kaleng'].map(cat => (
+                                            <button key={cat} onClick={() => setFilterCategoryInv(cat)} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase italic transition-all ${filterCategoryInv === cat ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200' : 'text-slate-400 hover:text-slate-900'}`}>{cat}</button>
+                                        ))}
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    {filteredInventory.length > 0 ? filteredInventory.map(item => (
-                                        <div key={item.id} className="card flex items-center justify-between border-l-4" style={{borderLeftColor: item.category === 'Apparel' ? '#6366f1' : item.category === 'Aksesoris' ? '#f59e0b' : '#10b981'}}>
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-[8px] font-black uppercase bg-slate-100 px-2 py-0.5 rounded text-slate-500 tracking-widest">{item.category}</span>
-                                                    <p className="text-[10px] font-bold text-indigo-500 italic uppercase">SIZE {item.size}</p>
+                                <div className="mb-10 relative animate-content" style={{animationDelay: '0.1s'}}>
+                                    <input type="text" placeholder="CARI ARTIKEL..." className="pl-14 bg-white h-16 shadow-xl shadow-slate-100 ring-1 ring-slate-100 border-none text-lg heading-font italic uppercase" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"><Icons.Search /></div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-content" style={{animationDelay: '0.2s'}}>
+                                    {filteredInventory.map(item => (
+                                        <div key={item.id} className="card border-l-8 border-l-indigo-600 bg-white group">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <span className="badge-cat bg-indigo-50 text-indigo-600 border border-indigo-100">{item.category}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Live Database</p>
                                                 </div>
-                                                <h3 className="text-xl font-black italic uppercase">{item.name}</h3>
-                                                <p className="text-2xl font-black italic text-slate-900">{item.stock} <span className="text-[10px] text-slate-400 uppercase not-italic">PCS</span></p>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <input className="w-16" type="number" placeholder="Qty" value={outQty[item.id] || ''} onChange={e => setOutQty({...outQty, [item.id]: e.target.value})} />
-                                                <button onClick={() => handleQuickOut(item)} className="bg-rose-500 text-white px-4 py-3 rounded-xl font-black uppercase italic text-[10px]">Out</button>
-                                            </div>
+                                            <h3 className="text-2xl font-black italic uppercase heading-font tracking-tight mb-2 group-hover:text-indigo-600 transition-colors">{item.name}</h3>
+                                            {item.category === 'Apparel' ? (
+                                                <div className="mt-6 grid grid-cols-5 gap-3 border-t pt-6">
+                                                    {Object.entries(item.sizes).map(([sz, stock]) => (
+                                                        <div key={sz} className="text-center group/size">
+                                                            <p className="text-[9px] font-black text-slate-400 uppercase mb-2 italic">{sz}</p>
+                                                            <div className={`p-3 rounded-2xl transition-all ${stock < 3 ? 'bg-rose-50 border-rose-100 border' : 'bg-slate-50 border-transparent border'}`}>
+                                                                <p className={`text-lg font-black italic heading-font ${stock < 3 ? 'text-rose-500' : 'text-slate-900'}`}>{stock}</p>
+                                                            </div>
+                                                            <button onClick={() => { setOutAmount(""); setConfirmDialog({ name: item.name, size: sz, category: 'Apparel', currentStock: stock, action: async (amt) => { await saveItemToCloud(item.name, sz, 'Apparel', amt, 'out'); showToast(`LOG: ${item.name} KELUAR ${amt}`); setConfirmDialog(null); }}); }} className="w-full mt-3 py-2 bg-slate-900 text-white rounded-xl font-black text-[10px] italic hover:bg-rose-600 transition-all opacity-0 group-hover:opacity-100">-</button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="flex justify-between items-end mt-8 border-t pt-6">
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 italic">VARIAN/WARNA: {item.size}</p>
+                                                        <div className="flex items-baseline gap-2">
+                                                            <p className={`text-5xl font-black italic heading-font ${item.stock < 5 ? 'text-rose-500' : 'text-slate-900'}`}>{item.stock}</p>
+                                                            <span className="text-[10px] font-black text-slate-300 uppercase italic">PCS</span>
+                                                        </div>
+                                                    </div>
+                                                    <button onClick={() => { setOutAmount(""); setConfirmDialog({ name: item.name, size: item.size, category: item.category, currentStock: item.stock, action: async (amt) => { await saveItemToCloud(item.name, item.size, item.category, amt, 'out'); showToast(`LOG: ${item.name} KELUAR ${amt}`); setConfirmDialog(null); }}); }} className="w-16 h-16 bg-slate-900 text-white rounded-3xl flex items-center justify-center font-black text-3xl hover:bg-rose-600 transition-all shadow-xl shadow-slate-200 italic">-</button>
+                                                </div>
+                                            )}
                                         </div>
-                                    )) : (
-                                        <div className="col-span-full py-20 text-center flex flex-col items-center opacity-20">
-                                            <Icons.Search />
-                                            <p className="mt-4 font-black italic uppercase text-xs">Stok tidak ditemukan</p>
-                                        </div>
-                                    )}
+                                    ))}
                                 </div>
                             </div>
                         )}
 
                         {tab === 'history' && (
-                            <div className="animate-in fade-in duration-500">
-                                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
-                                    <div>
-                                        <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-tight mb-2">Riwayat Cloud</h2>
-                                        <div className="flex flex-wrap gap-2">
-                                            {categories.map(cat => (
-                                                <button 
-                                                    key={cat} 
-                                                    onClick={() => setFilterCategory(cat)}
-                                                    className={`filter-btn ${filterCategory === cat ? 'filter-btn-active' : 'filter-btn-inactive'}`}
-                                                >
+                            <div className="max-w-6xl mx-auto">
+                                <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 mb-12 animate-content">
+                                    <PageHeader title="RIWAYAT LOG" subtitle="REKAPAN AKTIVITAS BARANG MASUK & KELUAR" icon={<Icons.History />} />
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex flex-wrap gap-2 bg-white p-2 rounded-2xl border shadow-sm">
+                                            {['Semua', 'Apparel', 'Aksesoris', 'Kaleng'].map(cat => (
+                                                <button key={cat} onClick={() => setFilterCategoryLog(cat)} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase italic transition-all ${filterCategoryLog === cat ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-900'}`}>
                                                     {cat}
                                                 </button>
                                             ))}
                                         </div>
+                                        <button onClick={exportToCSV} className="flex items-center gap-3 px-6 py-3 bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase italic shadow-xl shadow-emerald-50 hover:bg-slate-900 transition-all"><Icons.Download /> EKSPOR CSV</button>
                                     </div>
-                                    <button 
-                                        onClick={downloadCSV}
-                                        className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black italic text-[10px] uppercase shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-colors w-full lg:w-auto justify-center"
-                                    >
-                                        <Icons.Download /> Rekap {filterCategory === 'Semua' ? 'Total' : filterCategory} (CSV)
-                                    </button>
                                 </div>
-                                <div className="card p-0 overflow-hidden shadow-sm">
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-left">
-                                            <thead className="bg-slate-900 text-[10px] font-black text-slate-400 italic uppercase">
-                                                <tr>
-                                                    <th className="p-6">Stok & Kategori</th>
-                                                    <th className="p-6 text-center">Tipe</th>
-                                                    <th className="p-6 text-right">Jumlah</th>
+                                <div className="card p-0 overflow-hidden ring-4 ring-slate-100 border-none shadow-2xl animate-content" style={{animationDelay: '0.1s'}}>
+                                    <table className="w-full text-left">
+                                        <thead className="bg-slate-900 text-[10px] font-black text-slate-400 uppercase italic heading-font">
+                                            <tr>
+                                                <th className="p-6 border-r border-white/5 tracking-[0.2em]">DATA PRODUK & WAKTU</th>
+                                                <th className="p-6 text-center border-r border-white/5 tracking-[0.2em]">KATEGORI</th>
+                                                <th className="p-6 text-center border-r border-white/5 tracking-[0.2em]">TIPE</th>
+                                                <th className="p-6 text-right tracking-[0.2em]">KUANTITAS</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {filteredTransactions.length > 0 ? filteredTransactions.map(t => (
+                                                <tr key={t.id} className="text-[12px] font-bold uppercase italic hover:bg-indigo-50/30 transition-colors group">
+                                                    <td className="p-6">
+                                                        <p className="font-black text-slate-900 text-sm heading-font tracking-tight group-hover:text-indigo-600 transition-colors">{t.itemName}</p>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                                                            <p className="text-[9px] text-slate-400 font-black">{new Date(t.timestamp).toLocaleString('id-ID')}</p>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-6 text-center">
+                                                        <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-black border border-slate-200">{t.category}</span>
+                                                    </td>
+                                                    <td className="p-6 text-center">
+                                                        <span className={`px-4 py-1 rounded-xl text-[9px] font-black italic tracking-widest ${t.type === 'in' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                                                            {t.type === 'in' ? 'STOCK_IN' : 'STOCK_OUT'}
+                                                        </span>
+                                                    </td>
+                                                    <td className={`p-6 text-right font-black heading-font text-xl ${t.type === 'in' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                        {t.type === 'in' ? '+' : '-'}{t.amount}
+                                                    </td>
                                                 </tr>
-                                            </thead>
-                                            <tbody className="divide-y">
-                                                {filteredTransactions.length > 0 ? filteredTransactions.map(t => (
-                                                    <tr key={t.id} className="hover:bg-slate-50 transition-colors">
-                                                        <td className="p-6">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <span className={`text-[7px] font-black px-1.5 py-0.5 rounded uppercase ${t.category === 'Apparel' ? 'bg-indigo-100 text-indigo-600' : t.category === 'Aksesoris' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>{t.category}</span>
-                                                            </div>
-                                                            <p className="font-black italic uppercase text-sm leading-none">{t.itemName}</p>
-                                                            <p className="text-[9px] text-slate-400 font-bold mt-1 uppercase tracking-wider">{new Date(t.timestamp).toLocaleDateString('id-ID', {day:'2-digit', month:'long', year:'numeric'})}</p>
-                                                        </td>
-                                                        <td className="p-6 text-center">
-                                                            <span className={`px-4 py-1 rounded-full text-[9px] font-black uppercase ${t.type === 'in' ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>{t.type}</span>
-                                                        </td>
-                                                        <td className={`p-6 text-right text-2xl font-black italic ${t.type === 'in' ? 'text-emerald-500' : 'text-rose-500'}`}>{t.type === 'in' ? '+' : '-'}{t.amount}</td>
-                                                    </tr>
-                                                )) : (
-                                                    <tr>
-                                                        <td colSpan="3" className="p-20 text-center opacity-20 font-black italic uppercase text-xs">Riwayat Kosong</td>
-                                                    </tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                            )) : (
+                                                <tr>
+                                                    <td colSpan="4" className="p-24 text-center">
+                                                        <div className="flex flex-col items-center opacity-20">
+                                                            <Icons.History />
+                                                            <p className="mt-4 font-black italic uppercase text-lg tracking-[0.5em]">TIDAK ADA DATA</p>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         )}
                     </main>
+                    
+                    {toast && (
+                        <div className="fixed bottom-10 right-10 px-8 py-5 rounded-[2rem] bg-slate-900 text-white text-[10px] font-black uppercase italic shadow-2xl z-[150] border-2 border-indigo-500 flex items-center gap-4 animate-bounce">
+                            <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                            {toast.msg}
+                        </div>
+                    )}
                 </div>
             );
         }
