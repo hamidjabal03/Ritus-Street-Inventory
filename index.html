@@ -1,752 +1,642 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  LayoutDashboard, PlusCircle, Boxes, History, Trash2, Search, 
-  FileUp, Package, ArrowUpRight, FileDown, ArrowDownRight, 
-  LogOut, Eye, EyeOff, CheckCircle2, AlertCircle, Edit3, X, Save, Database
-} from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { 
-  getFirestore, collection, doc, onSnapshot, 
-  writeBatch, deleteDoc, updateDoc
-} from 'firebase/firestore';
-
-// --- KONFIGURASI FIREBASE OTOMATIS ---
-const firebaseConfig = JSON.parse(__firebase_config);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'ritus-street-v3';
-
-const CATEGORIES = ['Apparel', 'Accessories', 'Cans', 'Others'];
-const INITIAL_SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
-const CHART_COLORS = ['#3b82f6', '#10b981', '#ef4444', '#f59e0b', '#8b5cf6'];
-
-const RitusLogo = ({ className = "w-12 h-12" }) => (
-  <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="50" cy="50" r="50" fill="black" />
-    <path 
-      d="M32 25H55C65 25 72 31 72 40C72 49 65 55 55 55H44V75H32V25ZM44 44H54C57 44 59 42 59 40C59 38 57 36 54 36H44V44ZM56 55L70 75H83L68 53" 
-      fill="white"
-    />
-  </svg>
-);
-
-const App = () => {
-  const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [passwordInput, setPasswordInput] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [loginError, setLoginError] = useState(false);
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [items, setItems] = useState([]);
-  const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [alert, setAlert] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('All');
-  
-  const [editingItem, setEditingItem] = useState(null);
-  const [transactionItem, setTransactionItem] = useState(null);
-  const [transactionQty, setTransactionQty] = useState('');
-
-  const [formData, setFormData] = useState({
-    name: '',
-    category: 'Apparel',
-    quantities: {},
-  });
-
-  // Autentikasi Firebase
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RITUS STREET - Management System V7.1</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #020617; color: #f8fafc; margin: 0; overflow-x: hidden; }
+        .sidebar-dark { width: 260px; height: 100vh; position: fixed; background: #0f172a; border-right: 1px solid #1e293b; z-index: 50; }
+        .content-area { margin-left: 260px; padding: 2rem 3rem; min-height: 100vh; background: #020617; }
+        .card-ritus { background: #0f172a; border: 1px solid #1e293b; border-radius: 1.5rem; transition: all 0.3s ease; }
+        .card-ritus:hover { border-color: #3b82f6; }
+        .login-overlay { 
+            background: radial-gradient(circle at center, #1e293b 0%, #020617 100%); 
+            position: fixed; inset: 0; z-index: 1000; 
+            display: flex; align-items: center; justify-content: center; 
         }
-      } catch (err) {
-        console.error("Auth error:", err);
-      }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
-  }, []);
-
-  // Sinkronisasi Data Real-time
-  useEffect(() => {
-    if (!user) return;
-    
-    const itemsRef = collection(db, 'artifacts', appId, 'public', 'data', 'inventory');
-    const logsRef = collection(db, 'artifacts', appId, 'public', 'data', 'logs');
-
-    const unsubItems = onSnapshot(itemsRef, (snap) => {
-      setItems(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      setLoading(false);
-    }, (err) => console.error("Firestore Items Error:", err));
-
-    const unsubLogs = onSnapshot(logsRef, (snap) => {
-      setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (err) => console.error("Firestore Logs Error:", err));
-
-    return () => { unsubItems(); unsubLogs(); };
-  }, [user]);
-
-  const showAlert = (msg, type = 'success') => {
-    setAlert({ msg, type });
-    setTimeout(() => setAlert(null), 3000);
-  };
-
-  const handleLogin = (e) => {
-    e.preventDefault();
-    if (passwordInput === 'ritusstreet') {
-      setIsAuthenticated(true);
-      setLoginError(false);
-    } else {
-      setLoginError(true);
-      setTimeout(() => setLoginError(false), 500);
-    }
-  };
-
-  const handleManualAdd = async (e) => {
-    e.preventDefault();
-    if (!formData.name || !user) return;
-    
-    const batch = writeBatch(db);
-    const now = new Date().toISOString();
-    let hasEntries = false;
-
-    Object.entries(formData.quantities).forEach(([size, qty]) => {
-      const q = parseInt(qty);
-      if (isNaN(q) || q <= 0 || !size) return;
-
-      hasEntries = true;
-      const existing = items.find(i => i.name === formData.name && i.info === size);
-      
-      if (existing) {
-        batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'inventory', existing.id), {
-          qty: existing.qty + q,
-          updatedAt: now
-        });
-      } else {
-        const ref = doc(collection(db, 'artifacts', appId, 'public', 'data', 'inventory'));
-        batch.set(ref, { 
-          name: formData.name, 
-          info: size, 
-          category: formData.category || 'Others', 
-          qty: q, 
-          updatedAt: now 
-        });
-      }
-
-      const logRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'logs'));
-      batch.set(logRef, { 
-        name: formData.name, 
-        info: size, 
-        category: formData.category || 'Others', 
-        type: 'IN', 
-        qty: q, 
-        timestamp: now 
-      });
-    });
-
-    if (!hasEntries) {
-      showAlert("Masukkan jumlah stok minimal satu ukuran", "error");
-      return;
-    }
-
-    try {
-      await batch.commit();
-      setFormData({ name: '', category: 'Apparel', quantities: {} });
-      showAlert("Stok Berhasil Ditambahkan");
-    } catch (err) {
-      showAlert("Gagal menyimpan data", "error");
-    }
-  };
-
-  const handleTransaction = async (type) => {
-    if (!transactionItem || !transactionQty || !user) return;
-    const q = parseInt(transactionQty);
-    if (isNaN(q) || q <= 0) return;
-
-    if (type === 'OUT' && transactionItem.qty < q) {
-      showAlert("Stok Tidak Mencukupi!", "error");
-      return;
-    }
-
-    const batch = writeBatch(db);
-    const now = new Date().toISOString();
-    const itemRef = doc(db, 'artifacts', appId, 'public', 'data', 'inventory', transactionItem.id);
-    const logRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'logs'));
-
-    batch.update(itemRef, {
-      qty: type === 'IN' ? transactionItem.qty + q : transactionItem.qty - q,
-      updatedAt: now
-    });
-
-    batch.set(logRef, {
-      name: transactionItem.name || 'Tidak Diketahui',
-      info: transactionItem.info || 'N/A',
-      category: transactionItem.category || 'Others',
-      type,
-      qty: q,
-      timestamp: now
-    });
-
-    try {
-      await batch.commit();
-      showAlert(`Berhasil mencatat stok ${type}`);
-      setTransactionItem(null);
-      setTransactionQty('');
-    } catch (err) {
-      showAlert("Gagal mencatat transaksi", "error");
-    }
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingItem || !user) return;
-    try {
-      const itemRef = doc(db, 'artifacts', appId, 'public', 'data', 'inventory', editingItem.id);
-      await updateDoc(itemRef, {
-        name: editingItem.name || 'Unknown',
-        info: editingItem.info || 'N/A',
-        qty: parseInt(editingItem.qty) || 0,
-        updatedAt: new Date().toISOString()
-      });
-      showAlert("Data berhasil diperbarui");
-      setEditingItem(null);
-    } catch (e) {
-      showAlert("Gagal memperbarui data", "error");
-    }
-  };
-
-  // Impor CSV - Disesuaikan dengan Ritus.csv (Separator ';')
-  const importData = async (e) => {
-    const file = e.target.files[0];
-    if (!file || !user) return;
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const text = event.target.result;
-      // Memecah baris, mengabaikan baris kosong
-      const lines = text.split(/\r?\n/).filter(line => line.trim() !== "");
-      
-      // Header: Tanggal;Nama;Info;Jenis;Tipe;Jumlah
-      const batch = writeBatch(db);
-      const now = new Date().toISOString();
-      let count = 0;
-
-      // Mulai dari indeks 1 (mengabaikan header)
-      for (let i = 1; i < lines.length; i++) {
-        const parts = lines[i].split(";"); // Menggunakan pemisah titik koma
-        if (parts.length < 6) continue;
-
-        const name = parts[1]?.trim();
-        const info = parts[2]?.trim() || 'N/A';
-        const category = parts[3]?.trim() || 'Others';
-        const type = parts[4]?.trim()?.toUpperCase(); // IN atau OUT
-        const qty = parseInt(parts[5]) || 0;
-
-        if (!name || isNaN(qty)) continue;
-
-        // Cari apakah item sudah ada di inventory
-        const existing = items.find(item => item.name === name && item.info === info);
-        
-        if (existing) {
-          batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'inventory', existing.id), {
-            qty: type === 'IN' ? existing.qty + qty : existing.qty - qty,
-            updatedAt: now
-          });
-        } else {
-          const itemRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'inventory'));
-          batch.set(itemRef, { 
-            name, 
-            info, 
-            category, 
-            qty: type === 'IN' ? qty : 0, // Inisialisasi 0 jika OUT pertama kali
-            updatedAt: now 
-          });
+        .modal-overlay { 
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85); 
+            backdrop-filter: blur(8px); z-index: 2000; 
+            display: flex; align-items: center; justify-content: center; 
         }
-
-        // Catat Log
-        const logRef = doc(collection(db, 'artifacts', appId, 'public', 'data', 'logs'));
-        batch.set(logRef, { 
-          name, 
-          info, 
-          category, 
-          type: type === 'IN' ? 'IN' : 'OUT', 
-          qty, 
-          timestamp: now 
-        });
-        count++;
-      }
-
-      if (count > 0) {
-        try {
-          await batch.commit();
-          showAlert(`${count} entri data berhasil diproses`);
-        } catch (err) {
-          showAlert("Gagal memproses data", "error");
-        }
-      } else {
-        showAlert("Format file tidak sesuai (Gunakan pemisah ';')", "error");
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = null; 
-  };
-
-  const exportData = () => {
-    const headers = ['Nama', 'Info', 'Kategori', 'Stok'];
-    const rows = items.map(i => [i.name, i.info, i.category, i.qty]);
-    const csvContent = [headers, ...rows].map(e => e.join(";")).join("\n");
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `ritus-stok-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    showAlert("Data berhasil diekspor");
-  };
-
-  const stats = useMemo(() => {
-    const total = items.reduce((sum, i) => sum + (i.qty || 0), 0);
-    const count = items.filter(i => (i.qty || 0) > 0).length;
-    const stockIn = logs.filter(l => l.type === 'IN').reduce((sum, l) => sum + (l.qty || 0), 0);
-    const stockOut = logs.filter(l => l.type === 'OUT').reduce((sum, l) => sum + (l.qty || 0), 0);
-    return { total, count, stockIn, stockOut };
-  }, [items, logs]);
-
-  const filteredItems = useMemo(() => {
-    return items.filter(i => {
-      const matchSearch = (i.name || '').toLowerCase().includes(searchTerm.toLowerCase());
-      const matchCat = categoryFilter === 'All' || i.category === categoryFilter;
-      return matchSearch && matchCat;
-    }).sort((a,b) => (a.name || '').localeCompare(b.name || ''));
-  }, [items, searchTerm, categoryFilter]);
-
-  if (!isAuthenticated) {
-    return (
-      <div className="h-screen bg-slate-950 flex items-center justify-center p-6 text-white font-sans">
-        <div className={`w-full max-w-sm bg-slate-900 border border-slate-800 p-10 rounded-[40px] shadow-2xl text-center space-y-8 transition-all ${loginError ? 'animate-shake' : ''}`}>
-          <div className="flex flex-col items-center gap-4">
-             <RitusLogo className="w-16 h-16" />
-             <h1 className="text-4xl font-black italic uppercase tracking-tighter">Ritus<span className="text-blue-600">Street</span></h1>
-          </div>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="relative">
-              <input 
-                type={showPassword ? "text" : "password"} 
-                placeholder="PASSWORD" 
-                className={`w-full bg-slate-950 border ${loginError ? 'border-red-500' : 'border-slate-800'} rounded-2xl p-5 text-center text-sm font-bold tracking-widest outline-none focus:border-blue-600 transition-all`}
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-              />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500">
-                {showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}
-              </button>
-            </div>
-            <button className="w-full bg-blue-600 hover:bg-blue-500 py-5 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl transition-all active:scale-95">Masuk Gudang</button>
-          </form>
-          {loginError && <p className="text-red-500 text-[10px] font-black uppercase tracking-tighter">Akses Ditolak: Password Salah</p>}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex h-screen bg-slate-950 text-slate-200 overflow-hidden font-sans">
-      {/* Sidebar */}
-      <aside className="w-20 lg:w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
-        <div className="p-8 flex items-center gap-3">
-          <RitusLogo className="w-10 h-10" />
-          <h1 className="hidden lg:block text-xl font-black italic uppercase tracking-tighter">Ritus<span className="text-blue-600">Street</span></h1>
-        </div>
-        <nav className="flex-1 px-4 space-y-2">
-          {[
-            { id: 'dashboard', icon: LayoutDashboard, label: 'Beranda' },
-            { id: 'add', icon: PlusCircle, label: 'Tambah Stok' },
-            { id: 'inventory', icon: Boxes, label: 'Inventaris' },
-            { id: 'activities', icon: History, label: 'Aktivitas' },
-            { id: 'manager', icon: Database, label: 'Manajer Data' }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all ${activeTab === tab.id ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-800/50'}`}
-            >
-              <tab.icon size={22} />
-              <span className="hidden lg:block font-black text-[10px] uppercase tracking-widest">{tab.label}</span>
-            </button>
-          ))}
-        </nav>
-        <div className="p-8 border-t border-slate-800">
-           <button onClick={() => setIsAuthenticated(false)} className="w-full flex items-center justify-center gap-2 p-4 text-slate-600 hover:text-red-500 rounded-2xl border border-slate-800 transition-all">
-            <LogOut size={18} />
-            <span className="hidden lg:block text-[10px] font-black uppercase">Keluar</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-6 lg:p-12 relative">
-        {alert && (
-          <div className={`fixed top-12 left-1/2 -translate-x-1/2 z-[300] flex items-center gap-3 px-10 py-5 rounded-[24px] shadow-2xl border ${alert.type === 'success' ? 'bg-emerald-950 border-emerald-500 text-emerald-400' : 'bg-red-950 border-red-500 text-red-400'} animate-in slide-in-from-top-10`}>
-            {alert.type === 'success' ? <CheckCircle2 size={20}/> : <AlertCircle size={20}/>}
-            <span className="font-black text-xs uppercase tracking-widest">{alert.msg}</span>
-          </div>
-        )}
-
-        <div className="max-w-6xl mx-auto space-y-12 pb-24">
-          {activeTab === 'dashboard' && (
-            <div className="space-y-12 animate-in fade-in duration-500">
-               <div className="flex justify-between items-end">
-                 <div>
-                    <h2 className="text-5xl font-black italic uppercase tracking-tighter">Gudang</h2>
-                    <p className="text-slate-500 text-sm font-bold uppercase tracking-widest mt-2">Statistik Langsung</p>
-                 </div>
-               </div>
-
-               <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                  {[
-                    { label: 'Total Barang', val: stats.total, icon: Package, col: 'text-blue-500' },
-                    { label: 'Barang Masuk', val: stats.stockIn, icon: ArrowUpRight, col: 'text-emerald-500' },
-                    { label: 'Barang Keluar', val: stats.stockOut, icon: ArrowDownRight, col: 'text-red-500' },
-                    { label: 'Variasi Produk', val: stats.count, icon: Boxes, col: 'text-amber-500' }
-                  ].map((s, idx) => (
-                    <div key={idx} className="bg-slate-900 border border-slate-800 p-8 rounded-[32px] hover:border-slate-700 transition-all">
-                       <div className={`${s.col} mb-4 p-3 bg-slate-950 w-fit rounded-2xl`}>
-                          <s.icon size={24} />
-                       </div>
-                       <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">{s.label}</p>
-                       <p className={`text-4xl font-black italic mt-1 ${s.col}`}>{s.val.toLocaleString()}</p>
-                    </div>
-                  ))}
-               </div>
-
-               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div className="bg-slate-900 border border-slate-800 p-8 rounded-[40px] space-y-6">
-                    <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Stok per Kategori</h3>
-                    <div className="h-64">
-                       <ResponsiveContainer width="100%" height="100%">
-                         <PieChart>
-                           <Pie
-                             data={CATEGORIES.map(cat => ({ 
-                               name: cat, 
-                               value: items.filter(i => i.category === cat).reduce((sum, i) => sum + (i.qty || 0), 0)
-                             }))}
-                             cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value"
-                           >
-                             {CATEGORIES.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                           </Pie>
-                           <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '12px' }} />
-                         </PieChart>
-                       </ResponsiveContainer>
-                    </div>
-                  </div>
-                  <div className="bg-slate-900 border border-slate-800 p-8 rounded-[40px] space-y-6">
-                    <h3 className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Aliran Terbaru</h3>
-                    <div className="space-y-4">
-                      {logs.slice(-4).reverse().map(l => (
-                        <div key={l.id} className="flex items-center justify-between p-4 bg-slate-950 rounded-2xl border border-slate-800/50">
-                           <div className="flex gap-4 items-center">
-                              <div className={`p-2 rounded-xl ${l.type === 'IN' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-                                {l.type === 'IN' ? <ArrowUpRight size={16}/> : <ArrowDownRight size={16}/>}
-                              </div>
-                              <div>
-                                 <p className="text-xs font-black uppercase italic">{l.name}</p>
-                                 <p className="text-[9px] text-slate-600 font-bold uppercase">{l.info}</p>
-                              </div>
-                           </div>
-                           <p className="text-sm font-black font-mono">{l.type === 'IN' ? '+' : '-'}{l.qty}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-               </div>
-            </div>
-          )}
-
-          {activeTab === 'inventory' && (
-            <div className="space-y-8 animate-in fade-in duration-500">
-               <div className="flex flex-col md:flex-row justify-between items-end gap-6">
-                  <div>
-                    <h2 className="text-5xl font-black italic uppercase tracking-tighter">Inventaris</h2>
-                    <p className="text-slate-500 text-sm font-bold uppercase tracking-widest mt-2">Kelola Persediaan</p>
-                  </div>
-                  <div className="flex gap-3 w-full md:w-auto">
-                    <div className="relative flex-1 md:w-64">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={18} />
-                      <input 
-                        className="w-full bg-slate-900 border border-slate-800 rounded-2xl py-5 pl-12 pr-5 text-xs font-bold outline-none focus:border-blue-500 transition-all shadow-xl" 
-                        placeholder="CARI ARTIKEL..." 
-                        value={searchTerm} 
-                        onChange={e => setSearchTerm(e.target.value)} 
-                      />
-                    </div>
-                    <select 
-                      className="bg-slate-900 border border-slate-800 rounded-2xl px-6 text-[10px] font-black uppercase outline-none focus:border-blue-500 transition-all shadow-xl"
-                      value={categoryFilter}
-                      onChange={e => setCategoryFilter(e.target.value)}
-                    >
-                       <option value="All">SEMUA KATEGORI</option>
-                       {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-               </div>
-
-               <div className="bg-slate-900 border border-slate-800 rounded-[40px] overflow-hidden shadow-2xl overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead className="bg-slate-950/50 text-[10px] font-black text-slate-500 uppercase border-b border-slate-800">
-                      <tr>
-                        <th className="px-10 py-8">Detail Produk</th>
-                        <th className="px-10 py-8">Kategori</th>
-                        <th className="px-10 py-8">Stok</th>
-                        <th className="px-10 py-8 text-center">Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800">
-                      {filteredItems.map(item => (
-                        <tr key={item.id} className="hover:bg-slate-800/20 transition-all group">
-                          <td className="px-10 py-8">
-                             <div className="flex flex-col">
-                               <span className="font-black text-lg text-white italic uppercase tracking-tight">{item.name}</span>
-                               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{item.info}</span>
-                             </div>
-                          </td>
-                          <td className="px-10 py-8">
-                             <span className="px-4 py-2 rounded-full bg-slate-950 border border-slate-800 text-slate-400 text-[9px] font-black uppercase">
-                               {item.category}
-                             </span>
-                          </td>
-                          <td className="px-10 py-8">
-                             <div className="flex items-center gap-6">
-                                <span className={`text-2xl font-black italic font-mono ${item.qty < 5 ? 'text-red-500' : 'text-white'}`}>{item.qty}</span>
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                   <button onClick={() => setTransactionItem({...item, type: 'IN'})} className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500 hover:text-white transition-all"><PlusCircle size={18}/></button>
-                                   <button onClick={() => setTransactionItem({...item, type: 'OUT'})} className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"><X size={18} className="rotate-45"/></button>
-                                </div>
-                             </div>
-                          </td>
-                          <td className="px-10 py-8">
-                             <div className="flex justify-center items-center gap-2">
-                                <button onClick={() => setEditingItem(item)} className="p-3 text-slate-600 hover:text-blue-500"><Edit3 size={20}/></button>
-                                <button 
-                                  onClick={async () => {
-                                    if(window.confirm("Hapus variasi ini?")) {
-                                      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'inventory', item.id));
-                                      showAlert("Item dihapus", "success");
-                                    }
-                                  }} 
-                                  className="p-3 text-slate-700 hover:text-red-500"
-                                >
-                                  <Trash2 size={20}/>
-                                </button>
-                             </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-               </div>
-            </div>
-          )}
-
-          {activeTab === 'add' && (
-            <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-12 duration-500">
-              <div className="mb-10">
-                <h2 className="text-5xl font-black italic uppercase tracking-tighter">Tambah Artikel</h2>
-                <p className="text-slate-500 text-sm font-bold uppercase tracking-widest mt-2">Daftarkan Produk Baru</p>
-              </div>
-
-              <form onSubmit={handleManualAdd} className="bg-slate-900 border border-slate-800 rounded-[40px] p-12 space-y-10 shadow-2xl">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                   <div className="space-y-4">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Nama Artikel</label>
-                      <input 
-                        required 
-                        className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-5 text-sm font-bold outline-none focus:border-blue-500 uppercase transition-all" 
-                        value={formData.name} 
-                        onChange={e => setFormData({...formData, name: e.target.value})} 
-                        placeholder="CONTOH: 'REVOLUTION TEE'..." 
-                      />
-                   </div>
-                   <div className="space-y-4">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Kategori</label>
-                      <div className="grid grid-cols-2 gap-2">
-                         {CATEGORIES.map(c => (
-                           <button 
-                             key={c} 
-                             type="button" 
-                             onClick={() => setFormData({...formData, category: c})} 
-                             className={`py-4 rounded-xl text-[10px] font-black uppercase transition-all ${formData.category === c ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-950 text-slate-600 border border-slate-800'}`}
-                           >
-                             {c}
-                           </button>
-                         ))}
-                      </div>
-                   </div>
-                </div>
-
-                <div className="space-y-6">
-                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Stok Awal per Ukuran</label>
-                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-                      {INITIAL_SIZES.map(size => (
-                        <div key={size} className="space-y-3">
-                           <div className="flex justify-center font-black text-[10px] text-slate-400">{size}</div>
-                           <input 
-                             type="number" 
-                             className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-center text-sm font-black font-mono focus:border-blue-500 outline-none transition-all" 
-                             placeholder="0" 
-                             value={formData.quantities[size] || ''} 
-                             onChange={e => setFormData({...formData, quantities: {...formData.quantities, [size]: e.target.value}})} 
-                           />
-                        </div>
-                      ))}
-                   </div>
-                </div>
-
-                <button className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-6 rounded-[24px] uppercase text-xs tracking-[0.3em] shadow-2xl transition-all active:scale-95">Daftarkan Artikel</button>
-              </form>
-            </div>
-          )}
-
-          {activeTab === 'activities' && (
-             <div className="animate-in fade-in duration-500">
-                <h2 className="text-5xl font-black italic uppercase tracking-tighter mb-10">Aktivitas</h2>
-                <div className="bg-slate-900 border border-slate-800 rounded-[40px] overflow-hidden shadow-2xl overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead className="bg-slate-950/50 text-[10px] font-black uppercase text-slate-500 border-b border-slate-800">
-                      <tr>
-                        <th className="px-10 py-8">Waktu</th>
-                        <th className="px-10 py-8">Artikel</th>
-                        <th className="px-10 py-8">Aksi</th>
-                        <th className="px-10 py-8 text-center">Jumlah</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800">
-                      {logs.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)).map(l => (
-                        <tr key={l.id} className="text-sm hover:bg-slate-800/10">
-                          <td className="px-10 py-8 font-mono text-xs text-slate-500">{new Date(l.timestamp).toLocaleString()}</td>
-                          <td className="px-10 py-8">
-                            <div className="flex flex-col">
-                              <span className="font-black italic uppercase">{l.name}</span>
-                              <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{l.info}</span>
-                            </div>
-                          </td>
-                          <td className="px-10 py-8">
-                            <div className={`flex items-center gap-2 w-fit px-3 py-1 rounded-full text-[9px] font-black uppercase ${l.type === 'IN' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-                               {l.type === 'IN' ? <ArrowUpRight size={12}/> : <ArrowDownRight size={12}/>}
-                               STOK {l.type === 'IN' ? 'MASUK' : 'KELUAR'}
-                            </div>
-                          </td>
-                          <td className="px-10 py-8 text-center font-black text-lg font-mono">{l.qty}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-             </div>
-          )}
-
-          {activeTab === 'manager' && (
-            <div className="max-w-4xl mx-auto space-y-12 animate-in fade-in duration-500">
-               <h2 className="text-5xl font-black italic uppercase tracking-tighter">Manajer Data</h2>
-
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Export */}
-                  <div className="bg-slate-900 border border-slate-800 p-10 rounded-[40px] space-y-6">
-                    <div className="p-4 bg-blue-600/10 text-blue-500 w-fit rounded-2xl">
-                       <FileDown size={32} />
-                    </div>
-                    <h3 className="text-xl font-black italic uppercase">Ekspor CSV</h3>
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Unduh status inventaris saat ini</p>
-                    <button onClick={exportData} className="w-full bg-slate-950 border border-slate-800 hover:border-blue-600 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all">Unduh .CSV</button>
-                  </div>
-
-                  {/* Import */}
-                  <div className="bg-slate-900 border border-slate-800 p-10 rounded-[40px] space-y-6">
-                    <div className="p-4 bg-emerald-600/10 text-emerald-500 w-fit rounded-2xl">
-                       <FileUp size={32} />
-                    </div>
-                    <h3 className="text-xl font-black italic uppercase">Impor Data</h3>
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Pulihkan data dari file .csv (Pemisah ';')</p>
-                    <label className="block w-full bg-slate-950 border border-slate-800 hover:border-emerald-600 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest text-center cursor-pointer transition-all">
-                       Pilih File
-                       <input type="file" accept=".csv" onChange={importData} className="hidden" />
-                    </label>
-                  </div>
-               </div>
-            </div>
-          )}
-        </div>
-
-        {/* Modal: Kelola Stok */}
-        {transactionItem && (
-          <div className="fixed inset-0 z-[500] bg-black/90 backdrop-blur-md flex items-center justify-center p-6">
-             <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-[40px] p-10 space-y-8 animate-in zoom-in-95">
-                <div className="text-center space-y-3">
-                   <h3 className="text-2xl font-black uppercase italic">Stok {transactionItem.type === 'IN' ? 'Masuk' : 'Keluar'}</h3>
-                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{transactionItem.name} ({transactionItem.info})</p>
-                </div>
-                <div className="bg-slate-950 rounded-2xl p-6 border border-slate-800 text-center">
-                    <p className="text-[10px] font-black text-slate-600 uppercase mb-2">Tersedia</p>
-                    <p className="text-3xl font-black italic">{transactionItem.qty}</p>
-                </div>
-                <input 
-                  autoFocus
-                  type="number" 
-                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-6 text-center text-3xl font-black font-mono outline-none focus:border-blue-500" 
-                  placeholder="0"
-                  value={transactionQty}
-                  onChange={e => setTransactionQty(e.target.value)}
-                />
-                <div className="flex gap-4">
-                   <button onClick={() => setTransactionItem(null)} className="flex-1 py-5 text-slate-500 font-black uppercase text-[10px]">Batal</button>
-                   <button 
-                     onClick={() => handleTransaction(transactionItem.type)} 
-                     className={`flex-1 py-5 rounded-[20px] font-black uppercase text-[10px] text-white ${transactionItem.type === 'IN' ? 'bg-emerald-600' : 'bg-red-600'}`}
-                   >
-                     Simpan
-                   </button>
-                </div>
-             </div>
-          </div>
-        )}
-
-        {/* Modal: Edit Item */}
-        {editingItem && (
-          <div className="fixed inset-0 z-[500] bg-black/90 backdrop-blur-md flex items-center justify-center p-6">
-             <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-[40px] p-10 space-y-8 animate-in zoom-in-95">
-                <div className="flex justify-between items-center">
-                   <h3 className="text-2xl font-black uppercase italic">Ubah Variasi</h3>
-                   <button onClick={() => setEditingItem(null)} className="text-slate-600 hover:text-white"><X size={24}/></button>
-                </div>
-                <div className="space-y-5">
-                   <input className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-sm font-bold" value={editingItem.name} onChange={e => setEditingItem({...editingItem, name: e.target.value})} placeholder="Nama Artikel" />
-                   <input className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-sm font-bold" value={editingItem.info} onChange={e => setEditingItem({...editingItem, info: e.target.value})} placeholder="Variasi/Ukuran" />
-                   <input type="number" className="w-full bg-slate-950 border border-slate-800 rounded-2xl p-4 text-sm font-black font-mono" value={editingItem.qty} onChange={e => setEditingItem({...editingItem, qty: e.target.value})} placeholder="Jumlah Stok" />
-                </div>
-                <button onClick={handleSaveEdit} className="w-full bg-blue-600 py-4 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2">
-                   <Save size={18}/> Perbarui Data
-                </button>
-             </div>
-          </div>
-        )}
-      </main>
-
-      <style>{`
+        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+        .shake { animation: shake 0.4s ease-in-out; }
         @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-5px); }
-          75% { transform: translateX(5px); }
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
         }
-        .animate-shake { animation: shake 0.2s ease-in-out 0s 2; }
-      `}</style>
-    </div>
-  );
-};
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
 
-export default App;
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
 
+        const LucideIcon = ({ name, className = "w-5 h-5" }) => {
+            useEffect(() => { if(window.lucide) window.lucide.createIcons(); }, [name]);
+            return <i data-lucide={name} className={className}></i>;
+        };
+
+        function App() {
+            const [isAuth, setIsAuth] = useState(false);
+            const [loginData, setLoginData] = useState({ email: '', password: '' });
+            const [loginError, setLoginError] = useState(false);
+            const [showPassword, setShowPassword] = useState(false);
+            const [activeTab, setActiveTab] = useState('Dashboard');
+            
+            // Filters
+            const [globalDateRange, setGlobalDateRange] = useState({ 
+                from: "2024-01-01", 
+                to: new Date().toISOString().split('T')[0] 
+            });
+            const [stockSearch, setStockSearch] = useState('');
+            const [stockCategoryFilter, setStockCategoryFilter] = useState('Semua');
+            const [historyFilters, setHistoryFilters] = useState({ type: 'Semua', category: 'Semua', search: '' });
+
+            // UI States
+            const [verification, setVerification] = useState({ show: false, data: null, inputQty: 1 });
+            const [summaryPopup, setSummaryPopup] = useState({ show: false, stats: {} });
+            
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+            const [chartTypeFilter, setChartTypeFilter] = useState('OUT');
+
+            // Inventory & Logs State
+            const [inventory, setInventory] = useState([
+                { id: '1', name: "Ritus Essential Tee", category: "Apparel", sizes: { S: 12, M: 20, L: 15, XL: 10, XXL: 5 } },
+                { id: '2', name: "Ironlak 400ml Black", category: "Cans", qty: 48 },
+                { id: '3', name: "Slap Stickers Pack", category: "Aksesoris", qty: 100 }
+            ]);
+            const [logs, setLogs] = useState([]);
+
+            // Password Mock (Ubah 'admin123' sesuai keinginan)
+            const handleLogin = () => {
+                if (loginData.password === 'ritus123') {
+                    setIsAuth(true);
+                    setLoginError(false);
+                } else {
+                    setLoginError(true);
+                    setTimeout(() => setLoginError(false), 2000);
+                }
+            };
+
+            const formatCSVDate = (dateStr) => {
+                if (!dateStr || dateStr.trim() === "") return new Date().toISOString().split('T')[0];
+                const parts = dateStr.trim().split('/');
+                if (parts.length === 3) {
+                    const day = parts[0].padStart(2, '0');
+                    const month = parts[1].padStart(2, '0');
+                    const year = parts[2];
+                    return `${year}-${month}-${day}`;
+                }
+                return dateStr;
+            };
+
+            // Master Transaction Logic
+            const executeTransaction = (name, category, info, qty, type, customDate = null, bulkMode = false) => {
+                const cleanName = name.trim();
+                const cleanInfo = (info && info.trim() !== "") ? info.trim() : "N/A";
+                const amount = type.toUpperCase() === 'IN' ? parseInt(qty) : -Math.abs(parseInt(qty));
+                const transDate = customDate || new Date().toISOString().split('T')[0];
+                
+                let normalizedCategory = category.trim();
+                if (normalizedCategory.toLowerCase() === 'kaleng') normalizedCategory = 'Cans';
+
+                setInventory(prev => {
+                    let updated = [...prev];
+                    const idx = updated.findIndex(item => item.name.trim().toLowerCase() === cleanName.toLowerCase());
+
+                    if (idx > -1) {
+                        const item = {...updated[idx]};
+                        if (item.category === "Apparel") {
+                            const newSizes = {...(item.sizes || {})};
+                            newSizes[cleanInfo] = (newSizes[cleanInfo] || 0) + amount;
+                            item.sizes = newSizes;
+                        } else {
+                            item.qty = (item.qty || 0) + amount;
+                        }
+                        updated[idx] = item;
+                    } else {
+                        if (type.toUpperCase() === 'OUT') return prev; 
+                        if (normalizedCategory === "Apparel") {
+                            const initialSizes = { S: 0, M: 0, L: 0, XL: 0, XXL: 0 };
+                            initialSizes[cleanInfo] = Math.max(0, amount);
+                            updated.push({ id: Math.random().toString(), name: cleanName, category: normalizedCategory, sizes: initialSizes });
+                        } else {
+                            updated.push({ id: Math.random().toString(), name: cleanName, category: normalizedCategory, qty: Math.max(0, amount) });
+                        }
+                    }
+                    return updated;
+                });
+
+                setLogs(prev => [{
+                    id: Math.random().toString(36).substr(2, 9),
+                    date: transDate,
+                    name: cleanName, info: cleanInfo, category: normalizedCategory, type: type.toUpperCase(),
+                    qty: Math.abs(qty),
+                    user: loginData.email || "Admin"
+                }, ...prev]);
+
+                return { category: normalizedCategory, name: cleanName };
+            };
+
+            const handleCSVUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const text = event.target.result;
+                    const lines = text.split(/\r?\n/).filter(line => line.trim() !== "" && !line.startsWith(';'));
+                    const stats = {};
+                    let earliestDate = "9999-99-99";
+                    
+                    lines.slice(1).forEach(line => {
+                        const cols = line.split(';');
+                        if (cols.length >= 6 && cols[1] && cols[1].trim() !== "") {
+                            const sysDate = formatCSVDate(cols[0].trim());
+                            const name = cols[1].trim();
+                            const info = cols[2].trim();
+                            const category = cols[3].trim();
+                            const type = (cols[4].trim().toLowerCase() === 'in' || cols[4].trim().toLowerCase() === 'masuk') ? 'IN' : 'OUT';
+                            const qty = parseInt(cols[5]) || 0;
+
+                            if (qty > 0) {
+                                const result = executeTransaction(name, category, info, qty, type, sysDate, true);
+                                if (sysDate < earliestDate) earliestDate = sysDate;
+                                
+                                if (!stats[result.category]) stats[result.category] = new Set();
+                                stats[result.category].add(result.name);
+                            }
+                        }
+                    });
+
+                    if (earliestDate !== "9999-99-99") {
+                        setGlobalDateRange(prev => ({ ...prev, from: earliestDate < prev.from ? earliestDate : prev.from }));
+                    }
+                    
+                    // Format summary untuk popup
+                    const summary = {};
+                    Object.keys(stats).forEach(cat => summary[cat] = stats[cat].size);
+                    setSummaryPopup({ show: true, stats: summary });
+                };
+                reader.readAsText(file);
+                e.target.value = '';
+            };
+
+            const [manualForm, setManualForm] = useState({
+                name: '', category: 'Apparel', 
+                sizeType: 'Multiple', 
+                customSize: '',
+                sizes: { S: 0, M: 0, L: 0, XL: 0, XXL: 0 },
+                qty: 0, type: 'IN'
+            });
+
+            const handleManualSubmit = (e) => {
+                e.preventDefault();
+                const stats = {};
+                if (manualForm.category === 'Apparel') {
+                    Object.entries(manualForm.sizes).forEach(([size, qty]) => {
+                        if (qty > 0) {
+                            executeTransaction(manualForm.name, 'Apparel', size, qty, manualForm.type);
+                            stats['Apparel'] = 1;
+                        }
+                    });
+                } else {
+                    if (manualForm.qty > 0) {
+                        executeTransaction(manualForm.name, manualForm.category, manualForm.customSize, manualForm.qty, manualForm.type);
+                        stats[manualForm.category] = 1;
+                    }
+                }
+                setManualForm({...manualForm, name: '', sizes: { S: 0, M: 0, L: 0, XL: 0, XXL: 0 }, qty: 0, customSize: ''});
+                setSummaryPopup({ show: true, stats });
+            };
+
+            // Memoized Filters
+            const filteredInventory = useMemo(() => {
+                return inventory.filter(item => {
+                    const matchesSearch = item.name.toLowerCase().includes(stockSearch.toLowerCase());
+                    const matchesCategory = stockCategoryFilter === 'Semua' || item.category === stockCategoryFilter;
+                    return matchesSearch && matchesCategory;
+                });
+            }, [inventory, stockSearch, stockCategoryFilter]);
+
+            const filteredLogs = useMemo(() => {
+                return logs.filter(l => {
+                    const matchesDate = (globalDateRange.from ? l.date >= globalDateRange.from : true) && (globalDateRange.to ? l.date <= globalDateRange.to : true);
+                    const matchesType = historyFilters.type === 'Semua' || l.type === historyFilters.type;
+                    const matchesCategory = historyFilters.category === 'Semua' || l.category === historyFilters.category;
+                    const matchesSearch = l.name.toLowerCase().includes(historyFilters.search.toLowerCase());
+                    return matchesDate && matchesType && matchesCategory && matchesSearch;
+                }).sort((a, b) => new Date(b.date) - new Date(a.date));
+            }, [logs, globalDateRange, historyFilters]);
+
+            const dashboardStats = useMemo(() => {
+                const logsInPeriod = logs.filter(l => (globalDateRange.from ? l.date >= globalDateRange.from : true) && (globalDateRange.to ? l.date <= globalDateRange.to : true));
+                const totalIn = logsInPeriod.filter(l => l.type === 'IN').reduce((acc, curr) => acc + curr.qty, 0);
+                const totalOut = logsInPeriod.filter(l => l.type === 'OUT').reduce((acc, curr) => acc + curr.qty, 0);
+                const productMap = {};
+                logsInPeriod.filter(l => l.type === 'OUT').forEach(l => {
+                    if (!productMap[l.name]) productMap[l.name] = { name: l.name, qty: 0, category: l.category };
+                    productMap[l.name].qty += l.qty;
+                });
+                const ranking = Object.values(productMap).sort((a, b) => b.qty - a.qty).slice(0, 5);
+                return { totalIn, totalOut, ranking, logsInPeriod };
+            }, [logs, globalDateRange]);
+
+            // Charts
+            useEffect(() => {
+                if (activeTab === 'Dashboard' && chartRef.current) {
+                    const ctx = chartRef.current.getContext('2d');
+                    const dataCounts = { 'Apparel': 0, 'Aksesoris': 0, 'Cans': 0 };
+                    dashboardStats.logsInPeriod.filter(l => l.type === chartTypeFilter).forEach(log => {
+                        dataCounts[log.category] = (dataCounts[log.category] || 0) + log.qty;
+                    });
+                    if (chartInstance.current) chartInstance.current.destroy();
+                    chartInstance.current = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: Object.keys(dataCounts),
+                            datasets: [{
+                                data: Object.values(dataCounts),
+                                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b'],
+                                borderWidth: 0, hoverOffset: 15
+                            }]
+                        },
+                        options: { cutout: '78%', plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false }
+                    });
+                }
+            }, [activeTab, dashboardStats, chartTypeFilter]);
+
+            if (!isAuth) {
+                return (
+                    <div className="login-overlay">
+                        <div className={`w-full max-w-sm p-10 card-ritus text-center shadow-2xl transition-all ${loginError ? 'shake border-rose-500' : ''}`}>
+                            <div className="mb-8">
+                                <h1 className="text-4xl font-black italic text-white tracking-tighter uppercase">RITUS<span className="text-blue-500">STREET</span></h1>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.4em] mt-2">V7.1 Access Point</p>
+                            </div>
+                            <div className="space-y-4">
+                                <input type="email" placeholder="Email" className="w-full bg-slate-800 border border-slate-700 p-4 rounded-xl text-white outline-none focus:border-blue-500 transition-all text-sm" onChange={(e) => setLoginData({...loginData, email: e.target.value})}/>
+                                <div className="relative">
+                                    <input type={showPassword ? "text" : "password"} placeholder="Password" className="w-full bg-slate-800 border border-slate-700 p-4 rounded-xl text-white outline-none focus:border-blue-500 transition-all text-sm" onChange={(e) => setLoginData({...loginData, password: e.target.value})} onKeyPress={(e) => e.key === 'Enter' && handleLogin()}/>
+                                    <button onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white">
+                                        <LucideIcon name={showPassword ? "eye-off" : "eye"} className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                {loginError && <p className="text-rose-500 text-[10px] font-black uppercase tracking-widest animate-pulse">Password Salah!</p>}
+                                <button onClick={handleLogin} className="w-full bg-blue-600 p-4 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-blue-500 transition-all shadow-lg shadow-blue-900/40">Authorize</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="flex">
+                    {/* Summary Notification Modal */}
+                    {summaryPopup.show && (
+                        <div className="modal-overlay">
+                            <div className="card-ritus p-8 w-full max-w-sm text-center border-2 border-emerald-500">
+                                <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                    <LucideIcon name="check" className="text-emerald-500 w-8 h-8" />
+                                </div>
+                                <h3 className="text-xl font-black italic uppercase text-white mb-2">Input Berhasil</h3>
+                                <div className="space-y-2 mb-8">
+                                    {Object.entries(summaryPopup.stats).map(([cat, count]) => (
+                                        <div key={cat} className="flex justify-between items-center bg-slate-900 px-4 py-2 rounded-lg">
+                                            <span className="text-[10px] font-black text-slate-500 uppercase">{cat}</span>
+                                            <span className="text-white font-black">{count} Jenis</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button onClick={() => setSummaryPopup({show: false, stats: {}})} className="w-full bg-blue-600 py-4 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-500">Tutup</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Verification Modal */}
+                    {verification.show && (
+                        <div className="modal-overlay">
+                            <div className="card-ritus p-8 w-full max-w-md border-2 border-blue-500">
+                                <h2 className="text-xl font-black italic uppercase text-white mb-6">Verifikasi</h2>
+                                <div className="bg-slate-900/80 p-5 rounded-2xl mb-6 space-y-4 border border-slate-800">
+                                    <div className="flex justify-between items-center"><span className="text-slate-500 text-[10px] uppercase font-bold">Produk</span><span className="text-white font-black italic uppercase">{verification.data.name}</span></div>
+                                    <div className="flex justify-between items-center"><span className="text-slate-500 text-[10px] uppercase font-bold">Info</span><span className="text-blue-400 font-bold uppercase">{verification.data.info}</span></div>
+                                    <div className="flex justify-between items-center border-t border-slate-800 pt-3">
+                                        <span className="text-slate-500 text-[10px] uppercase font-bold">Tipe</span>
+                                        <span className={`font-black ${verification.data.type === 'IN' ? 'text-emerald-500' : 'text-rose-500'}`}>{verification.data.type === 'IN' ? 'MASUK (+)' : 'KELUAR (-)'}</span>
+                                    </div>
+                                    <div className="space-y-2 text-center">
+                                        <label className="text-slate-500 text-[10px] uppercase font-bold block">Jumlah</label>
+                                        <input type="number" min="1" value={verification.inputQty} onChange={(e) => setVerification({...verification, inputQty: parseInt(e.target.value) || 0})} className="w-full bg-slate-800 border-2 border-blue-500/50 p-4 rounded-xl text-center text-3xl font-black text-white italic outline-none" autoFocus />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button onClick={() => setVerification({show:false, data:null, inputQty:1})} className="py-4 bg-slate-800 text-slate-400 font-black uppercase text-[10px] rounded-xl hover:bg-slate-700">Batal</button>
+                                    <button onClick={() => {
+                                        executeTransaction(verification.data.name, verification.data.category, verification.data.info, verification.inputQty, verification.data.type);
+                                        setVerification({show:false, data:null, inputQty:1});
+                                    }} className="py-4 bg-blue-600 text-white font-black uppercase text-[10px] rounded-xl hover:bg-blue-500 shadow-lg">Konfirmasi</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Sidebar */}
+                    <aside className="sidebar-dark p-8 flex flex-col shadow-2xl">
+                        <div className="mb-10">
+                            <h2 className="text-2xl font-black italic text-white tracking-tighter uppercase">RITUS<span className="text-blue-500">STREET</span></h2>
+                        </div>
+                        <nav className="space-y-2 flex-1">
+                            {[
+                                {name: 'Dashboard', icon: 'layout'}, 
+                                {name: 'Daftar Stok', icon: 'package'}, 
+                                {name: 'Input Stok', icon: 'plus-square'}, 
+                                {name: 'Riwayat', icon: 'history'},
+                                {name: 'Reset Data', icon: 'refresh-ccw'}
+                            ].map(tab => (
+                                <button key={tab.name} onClick={() => setActiveTab(tab.name)} className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeTab === tab.name ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-800'}`}>
+                                    <LucideIcon name={tab.icon} className="w-4 h-4" /> {tab.name}
+                                </button>
+                            ))}
+                        </nav>
+                        <button onClick={() => setIsAuth(false)} className="mt-auto py-3 text-rose-500 font-black text-[10px] uppercase tracking-widest hover:text-rose-400 flex items-center gap-2">
+                             <LucideIcon name="log-out" className="w-3 h-3" /> Terminate
+                        </button>
+                    </aside>
+
+                    {/* Main */}
+                    <main className="content-area flex-1">
+                        <header className="flex justify-between items-center mb-10">
+                            <h1 className="text-4xl font-black italic uppercase text-white tracking-tighter">{activeTab}</h1>
+                            <div className="flex items-center gap-4 bg-slate-900/50 p-2 rounded-2xl border border-slate-800">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[8px] font-black text-slate-500 uppercase ml-2">Rentang Global:</span>
+                                    <input type="date" value={globalDateRange.from} onChange={e => setGlobalDateRange({...globalDateRange, from: e.target.value})} className="bg-slate-800 border border-slate-700 p-2 rounded-lg text-[10px] text-white"/>
+                                    <span className="text-slate-500 font-bold">-</span>
+                                    <input type="date" value={globalDateRange.to} onChange={e => setGlobalDateRange({...globalDateRange, to: e.target.value})} className="bg-slate-800 border border-slate-700 p-2 rounded-lg text-[10px] text-white"/>
+                                </div>
+                            </div>
+                        </header>
+
+                        {activeTab === 'Dashboard' && (
+                            <div className="space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="card-ritus p-8 border-l-4 border-blue-500">
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Jenis SKU</p>
+                                        <h3 className="text-4xl font-black italic text-white">{inventory.length}</h3>
+                                    </div>
+                                    <div className="card-ritus p-8 border-l-4 border-emerald-500">
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Total In (Periode)</p>
+                                        <h3 className="text-4xl font-black italic text-white">{dashboardStats.totalIn}</h3>
+                                    </div>
+                                    <div className="card-ritus p-8 border-l-4 border-rose-500">
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Total Out (Periode)</p>
+                                        <h3 className="text-4xl font-black italic text-white">{dashboardStats.totalOut}</h3>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                    <div className="card-ritus p-8 flex flex-col items-center">
+                                         <h3 className="text-[10px] font-black text-white uppercase tracking-widest mb-8 w-full">Analisis Kategori</h3>
+                                         <div className="relative h-64 w-full flex justify-center items-center">
+                                             <canvas ref={chartRef}></canvas>
+                                         </div>
+                                         <div className="flex gap-4 mt-6">
+                                            <button onClick={() => setChartTypeFilter('IN')} className={`px-4 py-1 text-[8px] font-black rounded ${chartTypeFilter === 'IN' ? 'bg-emerald-500 text-white' : 'text-slate-500'}`}>IN</button>
+                                            <button onClick={() => setChartTypeFilter('OUT')} className={`px-4 py-1 text-[8px] font-black rounded ${chartTypeFilter === 'OUT' ? 'bg-rose-500 text-white' : 'text-slate-500'}`}>OUT</button>
+                                         </div>
+                                    </div>
+                                    <div className="card-ritus p-8 lg:col-span-2">
+                                        <h3 className="text-[10px] font-black text-white uppercase tracking-widest mb-6">Item Terlaris (Periode)</h3>
+                                        <div className="space-y-4">
+                                            {dashboardStats.ranking.length > 0 ? dashboardStats.ranking.map((item, idx) => (
+                                                <div key={idx} className="flex items-center justify-between p-4 bg-slate-800/20 rounded-2xl border border-slate-800/40">
+                                                    <span className="text-sm font-black text-white uppercase italic">{item.name}</span>
+                                                    <span className="text-xl font-black italic text-blue-500">{item.qty}</span>
+                                                </div>
+                                            )) : <p className="text-slate-500 text-[10px] font-bold uppercase italic text-center py-10">Belum ada data transaksi keluar</p>}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'Daftar Stok' && (
+                            <div className="space-y-8">
+                                <div className="flex flex-col md:flex-row gap-6 items-center">
+                                    <div className="flex gap-4 flex-wrap">
+                                        {['Semua', 'Apparel', 'Aksesoris', 'Cans'].map(cat => (
+                                            <button key={cat} onClick={() => setStockCategoryFilter(cat)} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${stockCategoryFilter === cat ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-800 text-slate-500 hover:text-white'}`}>
+                                                {cat}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="flex-1 w-full relative">
+                                        <LucideIcon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
+                                        <input value={stockSearch} onChange={e => setStockSearch(e.target.value)} placeholder="CARI PRODUK..." className="w-full bg-slate-900 border border-slate-800 p-4 pl-12 rounded-2xl text-[10px] font-black tracking-widest uppercase text-white outline-none focus:border-blue-500 transition-all" />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                    {filteredInventory.map(item => (
+                                        <div key={item.id} className="card-ritus p-6">
+                                            <div className="flex justify-between items-start mb-6">
+                                                <div>
+                                                    <h4 className="font-black text-white uppercase text-lg italic leading-tight">{item.name}</h4>
+                                                    <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest">{item.category}</span>
+                                                </div>
+                                                {item.category !== 'Apparel' && (
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => requestTransaction({name: item.name, category: item.category, info: 'N/A', qty: 1, type: 'OUT'})} className="p-3 bg-slate-800 rounded-xl hover:bg-rose-500 transition-colors"><LucideIcon name="minus" className="w-4 h-4" /></button>
+                                                        <button onClick={() => requestTransaction({name: item.name, category: item.category, info: 'N/A', qty: 1, type: 'IN'})} className="p-3 bg-slate-800 rounded-xl hover:bg-emerald-500 transition-colors"><LucideIcon name="plus" className="w-4 h-4" /></button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {item.category === 'Apparel' ? (
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {Object.entries(item.sizes).map(([sz, q]) => (
+                                                        <div key={sz} className="p-2 bg-slate-900 rounded-xl flex justify-between items-center border border-slate-800">
+                                                            <span className="text-[10px] font-black text-slate-500">{sz}</span>
+                                                            <div className="flex items-center gap-2">
+                                                                <button onClick={() => requestTransaction({name: item.name, category: item.category, info: sz, qty: 1, type: 'OUT'})} className="w-6 h-6 rounded bg-slate-800 hover:bg-rose-600 transition-colors text-[10px]">-</button>
+                                                                <span className="text-xs font-black w-4 text-center">{q}</span>
+                                                                <button onClick={() => requestTransaction({name: item.name, category: item.category, info: sz, qty: 1, type: 'IN'})} className="w-6 h-6 rounded bg-slate-800 hover:bg-emerald-600 transition-colors text-[10px]">+</button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-baseline gap-2"><span className="text-5xl font-black text-white italic">{item.qty}</span><span className="text-[10px] font-bold text-slate-500 uppercase">Unit</span></div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'Input Stok' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <div className="card-ritus p-8">
+                                    <h3 className="text-lg font-black italic text-white uppercase mb-6">Input Manual</h3>
+                                    <form onSubmit={handleManualSubmit} className="space-y-6">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="col-span-2 md:col-span-1">
+                                                <label className="text-[10px] font-black text-slate-500 uppercase block mb-2">Nama Produk</label>
+                                                <input required value={manualForm.name} onChange={e => setManualForm({...manualForm, name: e.target.value})} className="w-full bg-slate-800 border border-slate-700 p-4 rounded-xl text-white font-bold outline-none focus:border-blue-500"/>
+                                            </div>
+                                            <div className="col-span-2 md:col-span-1">
+                                                <label className="text-[10px] font-black text-slate-500 uppercase block mb-2">Kategori</label>
+                                                <select value={manualForm.category} onChange={e => setManualForm({...manualForm, category: e.target.value})} className="w-full bg-slate-800 border border-slate-700 p-4 rounded-xl text-white font-bold text-xs uppercase outline-none focus:border-blue-500">
+                                                    <option value="Apparel">Apparel</option>
+                                                    <option value="Aksesoris">Aksesoris</option>
+                                                    <option value="Cans">Cans</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        {manualForm.category === 'Apparel' && (
+                                            <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800">
+                                                <p className="text-[8px] font-black text-blue-500 uppercase mb-4 tracking-widest">Input Ukuran (Biarkan 0 jika tidak ada)</p>
+                                                <div className="grid grid-cols-5 gap-2">
+                                                    {['S','M','L','XL','XXL'].map(size => (
+                                                        <div key={size} className="text-center">
+                                                            <label className="text-[8px] font-black text-slate-500 block mb-1">{size}</label>
+                                                            <input type="number" min="0" value={manualForm.sizes[size]} onChange={e => setManualForm({...manualForm, sizes: {...manualForm.sizes, [size]: parseInt(e.target.value) || 0}})} className="w-full bg-slate-800 border border-slate-700 p-2 rounded text-center text-xs text-white"/>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {manualForm.category !== 'Apparel' && (
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="text-[10px] font-black text-slate-500 uppercase block mb-2">Info (Opsional)</label>
+                                                    <input value={manualForm.customSize} onChange={e => setManualForm({...manualForm, customSize: e.target.value})} placeholder="Contoh: Blue / Silver" className="w-full bg-slate-800 border border-slate-700 p-4 rounded-xl text-white text-xs outline-none focus:border-blue-500"/>
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] font-black text-slate-500 uppercase block mb-2">Jumlah</label>
+                                                    <input type="number" min="1" required value={manualForm.qty} onChange={e => setManualForm({...manualForm, qty: parseInt(e.target.value) || 0})} className="w-full bg-slate-800 border border-slate-700 p-4 rounded-xl text-3xl font-black text-white italic outline-none focus:border-blue-500"/>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="flex gap-4">
+                                            <button type="button" onClick={() => setManualForm({...manualForm, type: 'IN'})} className={`flex-1 py-4 rounded-xl font-black text-[10px] transition-all ${manualForm.type === 'IN' ? 'bg-emerald-600 text-white scale-105' : 'bg-slate-800 text-slate-600'}`}>MASUK (+)</button>
+                                            <button type="button" onClick={() => setManualForm({...manualForm, type: 'OUT'})} className={`flex-1 py-4 rounded-xl font-black text-[10px] transition-all ${manualForm.type === 'OUT' ? 'bg-rose-600 text-white scale-105' : 'bg-slate-800 text-slate-600'}`}>KELUAR (-)</button>
+                                        </div>
+                                        
+                                        <button className="w-full bg-blue-600 p-5 rounded-xl font-black uppercase text-xs hover:bg-blue-500 shadow-xl shadow-blue-900/40">Kirim Transaksi</button>
+                                    </form>
+                                </div>
+                                <div className="card-ritus p-8 border-dashed border-2 border-slate-800 flex flex-col justify-center items-center group cursor-pointer hover:border-blue-500 transition-colors" onClick={() => document.getElementById('csvUpload').click()}>
+                                    <LucideIcon name="file-up" className="w-16 h-16 text-blue-500 mb-6 group-hover:scale-110 transition-transform"/>
+                                    <h3 className="text-xl font-black italic text-white uppercase mb-2">Import CSV</h3>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase mb-8">Pilih file .csv (delimiter ;) untuk update massal</p>
+                                    <input type="file" accept=".csv" onChange={handleCSVUpload} id="csvUpload" className="hidden" />
+                                    <div className="bg-slate-800 px-10 py-5 rounded-2xl font-black uppercase text-[10px] text-white hover:bg-slate-700 transition-all">Pilih File</div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'Riwayat' && (
+                            <div className="space-y-6">
+                                <div className="card-ritus p-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                                    <div className="col-span-1 md:col-span-1">
+                                        <label className="text-[8px] font-black text-slate-500 uppercase mb-2 block">Pencarian</label>
+                                        <input value={historyFilters.search} onChange={e => setHistoryFilters({...historyFilters, search: e.target.value})} placeholder="Cari..." className="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-[10px] text-white outline-none"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-[8px] font-black text-slate-500 uppercase mb-2 block">Tipe</label>
+                                        <select value={historyFilters.type} onChange={e => setHistoryFilters({...historyFilters, type: e.target.value})} className="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-[10px] text-white">
+                                            <option value="Semua">Semua Tipe</option>
+                                            <option value="IN">MASUK (IN)</option>
+                                            <option value="OUT">KELUAR (OUT)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-[8px] font-black text-slate-500 uppercase mb-2 block">Kategori</label>
+                                        <select value={historyFilters.category} onChange={e => setHistoryFilters({...historyFilters, category: e.target.value})} className="w-full bg-slate-800 border border-slate-700 p-3 rounded-xl text-[10px] text-white">
+                                            <option value="Semua">Semua Kategori</option>
+                                            <option value="Apparel">Apparel</option>
+                                            <option value="Aksesoris">Aksesoris</option>
+                                            <option value="Cans">Cans</option>
+                                        </select>
+                                    </div>
+                                    <button onClick={() => {
+                                        let csvTxt = "Tanggal;Produk;Info;Kategori;Tipe;Jumlah\n";
+                                        filteredLogs.forEach(l => csvTxt += `${l.date};${l.name};${l.info};${l.category};${l.type};${l.qty}\n`);
+                                        const blob = new Blob([csvTxt], { type: 'text/csv' });
+                                        const url = window.URL.createObjectURL(blob);
+                                        const a = document.createElement('a');
+                                        a.setAttribute('href', url);
+                                        a.setAttribute('download', `Ritus_Log_${new Date().toLocaleDateString()}.csv`);
+                                        a.click();
+                                    }} className="bg-blue-600 p-3 rounded-xl text-[10px] font-black uppercase text-white hover:bg-blue-500 shadow-lg">Ekspor CSV</button>
+                                </div>
+
+                                <div className="card-ritus overflow-hidden">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-slate-800/50 text-[9px] font-black text-slate-500 uppercase border-b border-slate-800">
+                                            <tr>
+                                                <th className="p-6">Tanggal</th>
+                                                <th className="p-6">Produk</th>
+                                                <th className="p-6">Info</th>
+                                                <th className="p-6 text-center">Tipe</th>
+                                                <th className="p-6 text-right">Jumlah</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-800/30">
+                                            {filteredLogs.length > 0 ? filteredLogs.map(log => (
+                                                <tr key={log.id} className="hover:bg-slate-800/20 transition-colors">
+                                                    <td className="p-6 text-[10px] font-black text-white italic">{log.date}</td>
+                                                    <td className="p-6">
+                                                        <p className="text-xs font-black uppercase text-white italic">{log.name}</p>
+                                                        <span className="text-[8px] font-bold text-blue-400 uppercase tracking-widest">{log.category}</span>
+                                                    </td>
+                                                    <td className="p-6"><span className="px-3 py-1 bg-slate-800 text-slate-400 rounded-lg text-[9px] font-black uppercase">{log.info}</span></td>
+                                                    <td className="p-6 text-center"><span className={`text-[9px] font-black uppercase px-4 py-1 rounded-full ${log.type === 'IN' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>{log.type}</span></td>
+                                                    <td className="p-6 text-right font-black italic text-2xl text-white">{log.qty}</td>
+                                                </tr>
+                                            )) : <tr><td colSpan="5" className="p-10 text-center text-slate-500 text-[10px] font-black uppercase italic tracking-widest">Tidak ada riwayat untuk periode ini</td></tr>}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'Reset Data' && (
+                            <div className="max-w-xl mx-auto py-10">
+                                <div className="card-ritus p-10 border-rose-500/50 border-2 text-center">
+                                    <LucideIcon name="alert-triangle" className="w-16 h-16 text-rose-500 mx-auto mb-6"/>
+                                    <h3 className="text-2xl font-black italic text-white uppercase mb-2">Reset Log Transaksi</h3>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase mb-8">Hapus permanen riwayat dari {globalDateRange.from} s/d {globalDateRange.to}</p>
+                                    <button onClick={() => {
+                                        const conf = window.confirm("Aksi ini tidak bisa dibatalkan. Hapus?");
+                                        if(conf) setLogs(prev => prev.filter(l => !(l.date >= globalDateRange.from && l.date <= globalDateRange.to)));
+                                    }} className="w-full bg-rose-600 p-5 rounded-xl font-black uppercase text-xs text-white hover:bg-rose-500 shadow-xl shadow-rose-900/40">Hapus Data</button>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
