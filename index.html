@@ -315,17 +315,18 @@
         import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
     const firebaseConfig = {
-  apiKey: "AIzaSyB2xfDX5Pu_nP5TEPSYFL6xmBcS0wZrj_c",
+  apiKey: "AIzaSyB2xfDX5PU_nP5TEPSYFL6xmBcS0wZrj_c",
   authDomain: "ritus-street-inventory.firebaseapp.com",
   projectId: "ritus-street-inventory",
   storageBucket: "ritus-street-inventory.firebasestorage.app",
   messagingSenderId: "249697895281",
   appId: "1:249697895281:web:c44bccdd16958c9d28ecd0",
   measurementId: "G-MMTVPVB24E"
-    };
+};
         const app = initializeApp(firebaseConfig);
         console.log(firebaseConfig);
         console.log("Firebase initialized");
+        console.log("API KEY:", firebaseConfig.apiKey);
         const auth = getAuth(app);
         const db_fs = getFirestore(app);
         const appId = 'ritus-street-whm-v11';
