@@ -46,7 +46,7 @@
             <div onclick="switchTab('inventory')" id="nav-inventory" class="sidebar-link p-4 flex items-center gap-4 text-zinc-400"><i class="fas fa-boxes text-sm text-blue-500"></i><span class="text-[10px] uppercase font-bold tracking-widest">Inventory</span></div>
             <div onclick="switchTab('history')" id="nav-history" class="sidebar-link p-4 flex items-center gap-4 text-zinc-400"><i class="fas fa-history text-sm text-zinc-400"></i><span class="text-[10px] uppercase font-bold tracking-widest">History Logs</span></div>
             <div onclick="switchTab('data-manage')" id="nav-data-manage" class="sidebar-link p-4 flex items-center gap-4 mt-4 pt-4 border-t border-white/5 text-zinc-400"><i class="fas fa-file-csv text-sm text-amber-500"></i><span class="text-[10px] uppercase font-bold tracking-widest">Data Management</span></div>
-            <div onclick="switchTab('system-cleanup')" id="nav-system-cleanup" class="sidebar-link p-4 flex items-center gap-4 text-zinc-400"><i class="fas fa-trash-alt text-sm text-rose-500"></i><span class="text-[10px] uppercase font-bold tracking-widest text-rose-500">Cleanup System</span></div>
+            <div onclick="switchTab('cleanup')" id="nav-cleanup" class="sidebar-link p-4 flex items-center gap-4 text-zinc-400"><i class="fas fa-trash-alt text-sm text-rose-500"></i><span class="text-[10px] uppercase font-bold tracking-widest text-rose-500">Cleanup System</span></div>
         </nav>
     </aside>
 
@@ -314,12 +314,19 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
         import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-        const firebaseConfig = JSON.parse(__firebase_config);
+        const firebaseConfig = {
+  apiKey: "AIzaSyB2xfDX5PUnP5TEPSYFL6xmBcS0wZrjc",
+  authDomain: "ritus-street-inventory.firebaseapp.com",
+  projectId: "ritus-street-inventory",
+  storageBucket: "ritus-street-inventory.firebasestorage.app",
+  messagingSenderId: "249697895281",
+  appId: "1:249697895281:web:c44bccdd16958c9d28ecd0",
+  measurementId: "G-MMTVPVB24E"
+        };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db_fs = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ritus-street-whm-v11';
-
+        const appId = 'ritus-street-whm-v11';
         let localDB = [];
         let unsubscribeSnap = null;
         let apparelType = 'standard';
@@ -328,30 +335,38 @@
         const PASSWORDS = ["RITUSSTREET2026", "RITUSMAKASSAR", "RITUS202626"];
 
         // Auth Logic
-        async function initAuth() {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                console.error("Auth Failure:", error);
-                showToast("Autentikasi Gagal", true);
+    async function initAuth() {
+    try {
+        await signInAnonymously(auth);
+    } catch (error) {
+        console.error("Auth Failure:", error);
+        showToast("Autentikasi Gagal", true);
             }
         }
 
-        window.checkAuth = async function() {
-            const val = document.getElementById('pass-input').value;
-            if(PASSWORDS.includes(val)) {
-                await initAuth(); 
-                document.getElementById('login-screen').classList.add('hidden');
-                document.getElementById('main-sidebar').classList.remove('hidden');
-                document.getElementById('main-content').classList.remove('hidden');
-            } else {
-                showToast("Password Salah!", true);
-            }
-        }
+window.checkAuth = async function() {
+
+    const val = document.getElementById('pass-input').value;
+
+    if (PASSWORDS.includes(val)) {
+
+        showToast("Login berhasil!");
+
+        await initAuth();
+
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('main-sidebar').classList.remove('hidden');
+        document.getElementById('main-content').classList.remove('hidden');
+
+    } else {
+
+        showToast("❌ Password Salah!", true);
+
+        document.getElementById('pass-input').value = "";
+
+        document.getElementById('pass-input').focus();
+    }
+}
 
         // Real-time Data Sync
         onAuthStateChanged(auth, (user) => {
@@ -660,8 +675,8 @@
             body.innerHTML = data.map(t => `
                 <tr class="border-b border-white/5 hover:bg-white/[0.01] transition-colors">
                     <td class="px-8 py-4 opacity-40">${t.date}</td>
-                    <td class="px-8 py-4 text-[10px] font-bold text-zinc-500 uppercase">${t.category}</td>
                     <td class="px-8 py-4 font-bold uppercase text-white">${t.name}</td>
+                    <td class="px-8 py-4 text-[10px] font-bold text-zinc-500 uppercase">${t.category}</td>
                     <td class="px-8 py-4 text-zinc-400 font-bold uppercase">${t.info}</td>
                     <td class="px-8 py-4"><span class="px-2 py-1 rounded text-[8px] font-black uppercase ${t.type==='In'?'bg-emerald-500/10 text-emerald-500':'bg-rose-500/10 text-rose-500'}">${t.type}</span></td>
                     <td class="px-8 py-4 text-right font-black ${t.type==='In'?'text-emerald-500':'text-rose-400'}">${t.type==='In'?'+':'-'}${t.qty}</td>
@@ -764,6 +779,11 @@
             t.className = `fixed bottom-10 right-10 z-[400] px-10 py-6 font-black rounded-2xl text-[11px] uppercase tracking-widest shadow-2xl transition-all duration-300 italic ${err?'bg-rose-600 text-white':'bg-white text-black'} show`;
             setTimeout(()=>t.classList.remove('show'), 3000);
         }
+        document.getElementById('pass-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        checkAuth();
+    }
+});
     </script>
 </body>
 </html>
