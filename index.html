@@ -375,6 +375,7 @@
 async function initAuth() {
     try {
         await signInAnonymously(auth);
+        console.log("AUTH USER:", auth.currentUser);
         console.log("Anonymous login success");
     } catch (error) {
         console.error("Auth Failure:", error);
@@ -592,9 +593,31 @@ try {
         'transactions'
     );
 
-    for (const item of batch) {
+for (const item of batch) {
 
-        await addDoc(colRef, item);
+    // SAVE INVENTORY
+    await addDoc(colRef, item);
+
+    // SAVE HISTORY LOG
+    await addDoc(
+        collection(
+            db_fs,
+            'artifacts',
+            appId,
+            'public',
+            'data',
+            'transactions'
+        ),
+        {
+            date: new Date().toISOString().split('T')[0],
+            name: item.name,
+            info: item.info || "-",
+            category: item.category,
+            type: 'In',
+            qty: item.qty
+        }
+    );
+}
 
         await addHistoryLog(
             "ADD STOCK",
