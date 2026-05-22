@@ -341,7 +341,23 @@
         let currentChartType = 'doughnut';
         let currentChartFilter = 'ALL';
         const PASSWORDS = ["RITUSSTREET2026", "RITUSMAKASSAR", "RITUS202626"];
-
+    function formatDate(date = new Date()) {
+    const d = String(date.getDate()).padStart(2, '0');
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const y = date.getFullYear();
+    return `${d}/${m}/${y}`;
+}
+        function formatDisplayDate(dateStr) {
+    if (!dateStr) return '-';
+    // jika sudah DD/MM/YYYY
+    if (dateStr.includes('/')) return dateStr;
+    const date = new Date(dateStr);
+    if (isNaN(date)) return dateStr;
+    const d = String(date.getDate()).padStart(2, '0');
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const y = date.getFullYear();
+    return `${d}/${m}/${y}`;
+}
         // Auth Logic
 async function initAuth() {
     try {
@@ -594,7 +610,7 @@ for (const item of batch) {
             'transactions'
         ),
         {
-            date: new Date().toISOString().split('T')[0],
+            date: formatDate(),
             name: item.name,
             info: item.info || "-",
             category: item.category,
@@ -743,7 +759,7 @@ for (const item of batch) {
         );
 
         const payload = {
-            date: new Date().toISOString().split('T')[0],
+            date: formatDate(),
             name,
             info,
             category: cat,
@@ -824,14 +840,16 @@ for (const item of batch) {
 
         // --- CSV IMPORT / EXPORT ---
         window.exportCSV = () => {
-            let csv = "Date;Name;Info;Category;Type;Qty\n";
-            localDB.forEach(t => csv += `${t.date};${t.name};${t.info};${t.category};${t.type};${t.qty}\n`);
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const a = document.createElement('a');
-            a.href = window.URL.createObjectURL(blob);
-            a.download = `RITUS_DATA_${new Date().toLocaleDateString()}.csv`;
-            a.click();
-        };
+    let csv = "Date;Name;Info;Category;Type;Qty\n";
+    localDB.forEach(t => {
+        csv += `${formatDisplayDate(t.date)};${t.name};${t.info};${t.category};${t.type};${t.qty}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = window.URL.createObjectURL(blob);
+    a.download = `RITUS_DATA_${formatDate()}.csv`;
+    a.click();
+};
 
         window.handleImport = async (input) => {
             const file = input.files[0];
