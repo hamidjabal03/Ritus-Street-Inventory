@@ -914,7 +914,7 @@ window.confirmCleanup = async () => {
     const verifyText =
         document.getElementById('clean-verify').value;
 
-    if (verifyText !== 'DELETE DATABASE') {
+    if (verifyText.trim().toUpperCase() !== 'DELETE DATABASE') {
 
         return showToast(
             "Ketik DELETE DATABASE untuk verifikasi!",
@@ -922,8 +922,22 @@ window.confirmCleanup = async () => {
         );
     }
 
-    const from = document.getElementById('clean-from').value;
-    const to = document.getElementById('clean-to').value;
+const from =
+    document.getElementById('clean-from').value;
+const to =
+    document.getElementById('clean-to').value;
+
+console.log("VERIFY:", verifyText);
+console.log("MODE:", window.cleanupMode);
+console.log("LOCALDB:", localDB.length);
+
+if(localDB.length === 0) {
+
+    return showToast(
+        "Database kosong / belum termuat",
+        true
+    );
+}
     let toPurge = [];
 
     if (window.cleanupMode === 'all') {
