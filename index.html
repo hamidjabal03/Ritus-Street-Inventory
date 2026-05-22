@@ -465,14 +465,28 @@ window.checkAuth = async function() {
                         legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                label: function(context) {
-                                    let label = context.label || '';
-                                    if (label) label += ': ';
-                                    let val = context.parsed.y !== null ? context.parsed.y : context.parsed;
-                                    let total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    let percentage = total > 0 ? Math.round((val * 100) / total) : 0;
-                                    return `${label}${val} Units (${percentage}%)`;
-                                }
+   label: function(context) {
+
+    let label = context.label || '';
+
+    if (label) label += ': ';
+
+    let val;
+
+    if (currentChartType === 'bar') {
+        val = context.parsed.y;
+    } else {
+        val = context.parsed;
+    }
+
+    let total = context.dataset.data.reduce((a, b) => a + b, 0);
+
+    let percentage = total > 0
+        ? Math.round((val * 100) / total)
+        : 0;
+
+    return `${label}${val} Units (${percentage}%)`;
+}
                             }
                         }
                     },
