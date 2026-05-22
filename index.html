@@ -901,10 +901,10 @@ for (const item of batch) {
         };
         // --- CLEANUP ---
 // --- CLEANUP ---
-window.cleanupData = (mode) => {
 
+    window.cleanupData = (mode) => {
     window.cleanupMode = mode;
-
+    confirmCleanup();
     switchTab('cleanup');
 
 };
