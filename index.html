@@ -391,7 +391,7 @@ window.checkAuth = async function() {
 
         document.getElementById('pass-input').focus();
     }
-}
+};
 
         // Real-time Data Sync
         onAuthStateChanged(auth, (user) => {
@@ -900,7 +900,6 @@ for (const item of batch) {
             reader.readAsText(file);
         };
         // --- CLEANUP ---
-// --- CLEANUP ---
 window.cleanupData = (mode) => {
     window.cleanupMode = mode;
     switchTab('cleanup');
@@ -969,12 +968,10 @@ for (const item of toPurge) {
         )
     );
 }
-
 showToast(`${toPurge.length} logs berhasil dihapus`);
-
 document.getElementById('clean-verify').value = "";
-
 switchTab('inventory');
+};
 
         // UTILS
         window.closeModal = () => document.getElementById('modal-confirm').classList.add('hidden');
