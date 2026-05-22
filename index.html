@@ -400,7 +400,16 @@ window.checkAuth = async function() {
             if (unsubscribeSnap) unsubscribeSnap();
             unsubscribeSnap = onSnapshot(colRef, (snapshot) => {
                 localDB = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                localDB.sort((a, b) => new Date(b.date) - new Date(a.date));
+            localDB.sort((a, b) => {
+    const parseDate = (str) => {
+        const parts = str.split('/');
+        if(parts.length !== 3) return new Date(str);
+        return new Date(
+            `${parts[2]}-${parts[1]}-${parts[0]}`
+        );
+    };
+    return parseDate(b.date) - parseDate(a.date);
+});
             requestAnimationFrame(() => {
                 updateDashboard();
                 renderInventory();
@@ -905,6 +914,7 @@ window.closeCleanup = () =>
             
             const from = document.getElementById('clean-from').value;
             const to = document.getElementById('clean-to').value;
+            console.log("MODE:", window.cleanupMode);
 let toPurge = [];
 
 if(window.cleanupMode === 'all') {
