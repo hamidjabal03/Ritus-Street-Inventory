@@ -409,9 +409,11 @@ window.checkAuth = async function() {
             unsubscribeSnap = onSnapshot(colRef, (snapshot) => {
                 localDB = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 localDB.sort((a, b) => new Date(b.date) - new Date(a.date));
+            requestAnimationFrame(() => {
                 updateDashboard();
                 renderInventory();
                 renderHistory();
+            });
             }, (error) => {
                 if(error.code === 'permission-denied') showToast("Sesi habis, harap refresh", true);
             });
@@ -567,7 +569,59 @@ window.checkAuth = async function() {
             
             try {
                 const colRef = collection(db_fs, 'artifacts', appId, 'public', 'data', 'transactions');
-                for (const item of batch) await addDoc(colRef, item);
+ if (isProcessing) return;
+
+isProcessing = true;
+
+const btns = document.querySelectorAll('button');
+
+try {
+
+    btns.forEach(b => b.disabled = true);
+
+    const colRef = collection(
+        db_fs,
+        'artifacts',
+        appId,
+        'public',
+        'data',
+        'transactions'
+    );
+
+    for (const item of batch) {
+
+        await addDoc(colRef, item);
+
+        await addHistoryLog(
+            "ADD STOCK",
+            item.name,
+            item.category,
+            item.qty,
+            item.info
+        );
+    }
+
+    showToast("Produk berhasil ditambahkan!");
+
+    // RESET FORM
+    document.getElementById('in-name').value = "";
+    document.querySelectorAll('.variant-input').forEach(i => i.value = "");
+    document.getElementById('custom-variants-list').innerHTML = "";
+    document.getElementById('gen-qty').value = "";
+    document.getElementById('gen-info').value = "";
+
+} catch(e) {
+
+    console.error(e);
+
+    showToast("Gagal menyimpan data", true);
+
+} finally {
+
+    isProcessing = false;
+
+    btns.forEach(b => b.disabled = false);
+}
                 showToast("Produk berhasil ditambahkan!");
                 
                 // Reset form
@@ -659,15 +713,75 @@ window.checkAuth = async function() {
             btn.innerText = `KONFIRMASI ${type.toUpperCase()}`;
             btn.className = `py-4 rounded-xl font-black text-[10px] uppercase ${type === 'In' ? 'bg-emerald-500 text-black' : 'bg-rose-500 text-white'}`;
             btn.onclick = async () => {
-                if (!auth.currentUser) return;
-                const colRef = collection(db_fs, 'artifacts', appId, 'public', 'data', 'transactions');
-                await addDoc(colRef, { date: new Date().toISOString().split('T')[0], name, info, category: cat, type, qty: val });
-                el.value = "";
+        
+            if (isProcessing) return;
+        
+            isProcessing = true;
+        
+            btn.disabled = true;
+        
+            btn.innerHTML = "PROCESSING...";
+        
+            try {
+        
+                if (!auth.currentUser) {
+                    throw new Error("Auth invalid");
+                }
+        
+                // TUTUP MODAL DULU BIAR RESPONSIF
                 closeModal();
-                showToast(`Stok berhasil diupdate!`);
-            };
-            modal.classList.remove('hidden');
+        
+                const colRef = collection(
+                    db_fs,
+                    'artifacts',
+                    appId,
+                    'public',
+                    'data',
+                    'transactions'
+                );
+        
+                const payload = {
+                    date: new Date().toISOString().split('T')[0],
+                    name,
+                    info,
+                    category: cat,
+                    type,
+                    qty: val
+                };
+        
+                // SAVE TRANSACTION
+                await addDoc(colRef, payload);
+        
+                // SAVE HISTORY LOG
+                await addHistoryLog(
+                    type === 'In' ? 'ADD STOCK' : 'REMOVE STOCK',
+                    name,
+                    cat,
+                    val,
+                    `${type} ${info}`
+                );
+        
+                el.value = "";
+        
+                showToast("Stok berhasil diupdate!");
+        
+            } catch(err) {
+        
+                console.error(err);
+        
+                showToast("Gagal update stok", true);
+        
+            } finally {
+        
+                isProcessing = false;
+        
+                btn.disabled = false;
+        
+                btn.innerHTML = `KONFIRMASI ${type.toUpperCase()}`;
+            }
         };
+                    modal.classList.remove('hidden');
+                };
 
         window.triggerDeleteSKU = (name, cat) => {
             const modal = document.getElementById('modal-delete-sku');
