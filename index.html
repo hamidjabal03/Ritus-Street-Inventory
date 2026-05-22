@@ -333,17 +333,6 @@
         console.log("API KEY:", firebaseConfig.apiKey);
         const auth = getAuth(app);
         const db_fs = getFirestore(app);
-
-        await addDoc(historyRef, {
-            action: action,
-            product: product,
-            category: category,
-            qty: qty,
-            note: note,
-            createdAt: new Date().toISOString()
-        });
-
-        console.log("History saved");
         const appId = 'ritus-street-whm-v11';
         let localDB = [];
         let isProcessing = false;
