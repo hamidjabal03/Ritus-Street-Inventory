@@ -905,30 +905,66 @@ window.closeCleanup = () =>
             
             const from = document.getElementById('clean-from').value;
             const to = document.getElementById('clean-to').value;
-            
-            let toPurge = [];
-            if(!from && !to) {
-                // All data
-                toPurge = [...localDB];
-            } else if (from && to) {
-                // Range data
-                toPurge = localDB.filter(x => x.date >= from && x.date <= to);
-            } else {
-                return showToast("Pilih kedua rentang tanggal atau biarkan kosong untuk semua!", true);
-            }
+let toPurge = [];
 
-            if(toPurge.length === 0) return showToast("Tidak ada data pada rentang tersebut.", true);
-            if(!auth.currentUser) return;
+if(window.cleanupMode === 'all') {
 
-            showToast("Sedang membersihkan data...", false);
-            for (const item of toPurge) {
-                await deleteDoc(doc(db_fs, 'artifacts', appId, 'public', 'data', 'transactions', item.id));
-            }
-            
-    showToast(`${toPurge.length} logs berhasil dihapus`);
-    document.getElementById('clean-verify').value = "";
-      switchTab('inventory');
-        };
+    // ALL DATA
+    toPurge = [...localDB];
+
+} else if (from && to) {
+
+    // RANGE DATE
+    toPurge = localDB.filter(x => {
+
+        const parts = x.date.split('/');
+
+        if(parts.length !== 3) return false;
+
+        const formatted =
+            `${parts[2]}-${parts[1]}-${parts[0]}`;
+
+        return formatted >= from && formatted <= to;
+    });
+
+} else {
+
+    return showToast(
+        "Pilih kedua rentang tanggal atau biarkan kosong untuk semua!",
+        true
+    );
+}
+
+if(toPurge.length === 0)
+    return showToast(
+        "Tidak ada data pada rentang tersebut.",
+        true
+    );
+
+if(!auth.currentUser) return;
+
+showToast("Sedang membersihkan data...", false);
+
+for (const item of toPurge) {
+
+    await deleteDoc(
+        doc(
+            db_fs,
+            'artifacts',
+            appId,
+            'public',
+            'data',
+            'transactions',
+            item.id
+        )
+    );
+}
+
+showToast(`${toPurge.length} logs berhasil dihapus`);
+
+document.getElementById('clean-verify').value = "";
+
+switchTab('inventory');
 
         // UTILS
         window.closeModal = () => document.getElementById('modal-confirm').classList.add('hidden');
