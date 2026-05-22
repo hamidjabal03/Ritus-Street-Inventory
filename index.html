@@ -329,6 +329,35 @@
         console.log("API KEY:", firebaseConfig.apiKey);
         const auth = getAuth(app);
         const db_fs = getFirestore(app);
+    async function addHistoryLog(action, product, category, qty, note = "") {
+
+    try {
+
+        const historyRef = collection(
+            db_fs,
+            'artifacts',
+            appId,
+            'public',
+            'data',
+            'history_logs'
+        );
+
+        await addDoc(historyRef, {
+            action: action,
+            product: product,
+            category: category,
+            qty: qty,
+            note: note,
+            createdAt: new Date().toISOString()
+        });
+
+        console.log("History saved");
+
+    } catch(err) {
+
+        console.error("History Log Error:", err);
+    }
+}
         const appId = 'ritus-street-whm-v11';
         let localDB = [];
         let unsubscribeSnap = null;
@@ -736,7 +765,13 @@ window.checkAuth = async function() {
             };
             reader.readAsText(file);
         };
-
+await addHistoryLog(
+    "ADD STOCK",
+    name,
+    category,
+    qty,
+    "Stock ditambahkan manual"
+);
         // --- CLEANUP ---
         window.requestCleanup = () => document.getElementById('cleanup-modal').classList.remove('hidden');
         window.closeCleanup = () => document.getElementById('cleanup-modal').classList.add('hidden');
