@@ -874,13 +874,6 @@ for (const item of batch) {
             };
             reader.readAsText(file);
         };
-await addHistoryLog(
-    "ADD STOCK",
-    name,
-    category,
-    qty,
-    "Stock ditambahkan manual"
-);
         // --- CLEANUP ---
         window.requestCleanup = () => document.getElementById('cleanup-modal').classList.remove('hidden');
         window.closeCleanup = () => document.getElementById('cleanup-modal').classList.add('hidden');
