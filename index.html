@@ -333,18 +333,6 @@
         console.log("API KEY:", firebaseConfig.apiKey);
         const auth = getAuth(app);
         const db_fs = getFirestore(app);
-    async function addHistoryLog(action, product, category, qty, note = "") {
-
-    try {
-
-        const historyRef = collection(
-            db_fs,
-            'artifacts',
-            appId,
-            'public',
-            'data',
-            'history_logs'
-        );
 
         await addDoc(historyRef, {
             action: action,
@@ -619,15 +607,6 @@ for (const item of batch) {
     );
 }
 
-        await addHistoryLog(
-            "ADD STOCK",
-            item.name,
-            item.category,
-            item.qty,
-            item.info
-        );
-    }
-
     showToast("Produk berhasil ditambahkan!");
 
     // RESET FORM
@@ -739,74 +718,63 @@ for (const item of batch) {
             const btn = document.getElementById('confirm-btn-final');
             btn.innerText = `KONFIRMASI ${type.toUpperCase()}`;
             btn.className = `py-4 rounded-xl font-black text-[10px] uppercase ${type === 'In' ? 'bg-emerald-500 text-black' : 'bg-rose-500 text-white'}`;
-            btn.onclick = async () => {
-        
-            if (isProcessing) return;
-        
-            isProcessing = true;
-        
-            btn.disabled = true;
-        
-            btn.innerHTML = "PROCESSING...";
-        
-            try {
-        
-                if (!auth.currentUser) {
-                    throw new Error("Auth invalid");
-                }
-        
-                // TUTUP MODAL DULU BIAR RESPONSIF
-                closeModal();
-        
-                const colRef = collection(
-                    db_fs,
-                    'artifacts',
-                    appId,
-                    'public',
-                    'data',
-                    'transactions'
-                );
-        
-                const payload = {
-                    date: new Date().toISOString().split('T')[0],
-                    name,
-                    info,
-                    category: cat,
-                    type,
-                    qty: val
-                };
-        
-                // SAVE TRANSACTION
-                await addDoc(colRef, payload);
-        
-                // SAVE HISTORY LOG
-                await addHistoryLog(
-                    type === 'In' ? 'ADD STOCK' : 'REMOVE STOCK',
-                    name,
-                    cat,
-                    val,
-                    `${type} ${info}`
-                );
-        
-                el.value = "";
-        
-                showToast("Stok berhasil diupdate!");
-        
-            } catch(err) {
-        
-                console.error(err);
-        
-                showToast("Gagal update stok", true);
-        
-            } finally {
-        
-                isProcessing = false;
-        
-                btn.disabled = false;
-        
-                btn.innerHTML = `KONFIRMASI ${type.toUpperCase()}`;
-            }
+ btn.onclick = async () => {
+
+    if (isProcessing) return;
+
+    isProcessing = true;
+
+    btn.disabled = true;
+
+    btn.innerHTML = "PROCESSING...";
+
+    try {
+
+        if (!auth.currentUser) {
+            throw new Error("Auth invalid");
+        }
+
+        closeModal();
+
+        const colRef = collection(
+            db_fs,
+            'artifacts',
+            appId,
+            'public',
+            'data',
+            'transactions'
+        );
+
+        const payload = {
+            date: new Date().toISOString().split('T')[0],
+            name,
+            info,
+            category: cat,
+            type,
+            qty: val
         };
+        await new Promise(r => setTimeout(r, 300));
+        await addDoc(colRef, payload);
+
+        showToast("Stok berhasil diupdate!");
+
+        el.value = "";
+
+    } catch(err) {
+
+        console.error(err);
+
+        showToast("Gagal update stok", true);
+
+    } finally {
+
+        isProcessing = false;
+
+        btn.disabled = false;
+
+        btn.innerHTML = `KONFIRMASI ${type.toUpperCase()}`;
+    }
+};
                     modal.classList.remove('hidden');
                 };
 
