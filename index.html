@@ -900,79 +900,90 @@ for (const item of batch) {
             reader.readAsText(file);
         };
         // --- CLEANUP ---
+// --- CLEANUP ---
 window.cleanupData = (mode) => {
+
     window.cleanupMode = mode;
+
     switchTab('cleanup');
-};
-window.closeCleanup = () =>
-    document.getElementById('cleanup-modal')
-        .classList.add('hidden');
-        window.confirmCleanup = async () => {
-            const verifyText = document.getElementById('clean-verify').value;
-            if(verifyText !== 'DELETE DATABASE') return showToast("Ketik DELETE DATABASE untuk verifikasi!", true);
-            
-            const from = document.getElementById('clean-from').value;
-            const to = document.getElementById('clean-to').value;
-            console.log("MODE:", window.cleanupMode);
-let toPurge = [];
 
-if(window.cleanupMode === 'all') {
-
-    // ALL DATA
-    toPurge = [...localDB];
-
-} else if (from && to) {
-
-    // RANGE DATE
-    toPurge = localDB.filter(x => {
-
-        const parts = x.date.split('/');
-
-        if(parts.length !== 3) return false;
-
-        const formatted =
-            `${parts[2]}-${parts[1]}-${parts[0]}`;
-
-        return formatted >= from && formatted <= to;
-    });
-
-} else {
-
-    return showToast(
-        "Pilih kedua rentang tanggal atau biarkan kosong untuk semua!",
-        true
-    );
-}
-
-if(toPurge.length === 0)
-    return showToast(
-        "Tidak ada data pada rentang tersebut.",
-        true
-    );
-
-if(!auth.currentUser) return;
-
-showToast("Sedang membersihkan data...", false);
-
-for (const item of toPurge) {
-
-    await deleteDoc(
-        doc(
-            db_fs,
-            'artifacts',
-            appId,
-            'public',
-            'data',
-            'transactions',
-            item.id
-        )
-    );
-}
-showToast(`${toPurge.length} logs berhasil dihapus`);
-document.getElementById('clean-verify').value = "";
-switchTab('inventory');
 };
 
+window.confirmCleanup = async () => {
+
+    const verifyText =
+        document.getElementById('clean-verify').value;
+
+    if (verifyText !== 'DELETE DATABASE') {
+
+        return showToast(
+            "Ketik DELETE DATABASE untuk verifikasi!",
+            true
+        );
+    }
+
+    const from = document.getElementById('clean-from').value;
+    const to = document.getElementById('clean-to').value;
+    let toPurge = [];
+
+    if (window.cleanupMode === 'all') {
+
+        toPurge = [...localDB];
+
+    } else if (from && to) {
+
+        toPurge = localDB.filter(x => {
+
+            const parts = x.date.split('/');
+            if (parts.length !== 3) return false;
+            const formatted =
+                `${parts[2]}-${parts[1]}-${parts[0]}`;
+            return formatted >= from &&
+                   formatted <= to;
+        });
+
+    } else {
+
+        return showToast(
+            "Pilih kedua rentang tanggal!",
+            true
+        );
+    }
+    if (toPurge.length === 0) {
+        return showToast(
+            "Tidak ada data ditemukan.",
+            true
+        );
+    }
+    if (!auth.currentUser) {
+        return showToast(
+            "Auth tidak valid",
+            true
+        );
+    }
+
+    showToast("Sedang membersihkan data...");
+
+    for (const item of toPurge) {
+
+        await deleteDoc(
+            doc(
+                db_fs,
+                'artifacts',
+                appId,
+                'public',
+                'data',
+                'transactions',
+                item.id
+            )
+        );
+    }
+    showToast(
+        `${toPurge.length} logs berhasil dihapus`
+    );
+    document.getElementById('clean-verify').value = "";
+    switchTab('inventory');
+};
         // UTILS
         window.closeModal = () => document.getElementById('modal-confirm').classList.add('hidden');
         window.closeDeleteModal = () => document.getElementById('modal-delete-sku').classList.add('hidden');
