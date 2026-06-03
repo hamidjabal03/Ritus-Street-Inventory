@@ -8,7 +8,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght=300;400;500;600;700;800&display=swap');
         :root { --bg-deep: #000000; --card-bg: #0d0d0d; --border: rgba(255, 255, 255, 0.08); }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg-deep); color: #ffffff; overflow-x: hidden; }
         .sidebar-link { transition: all 0.2s ease; cursor: pointer; border-radius: 12px; margin-bottom: 4px; }
@@ -20,9 +20,9 @@
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
         button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body class="flex min-h-screen">
@@ -60,11 +60,32 @@
         <!-- DASHBOARD -->
         <div id="tab-dashboard" class="tab-content space-y-8">
             <h2 class="text-3xl font-black italic uppercase">Analytics Overview</h2>
+            
+            <!-- ROW 1: Stock Status Grid -->
             <div class="grid grid-cols-4 gap-6">
                 <div class="glass-card p-6 text-zinc-400"><p class="text-[10px] font-bold uppercase tracking-widest">ACTIVE SKU</p><p id="dash-active" class="text-3xl font-bold text-white">0</p></div>
                 <div class="glass-card p-6 text-rose-500"><p class="text-[10px] font-bold uppercase tracking-widest">NON ACTIVE SKU</p><p id="dash-empty" class="text-3xl font-bold">0</p></div>
                 <div class="glass-card p-6 text-emerald-500"><p class="text-[10px] font-bold uppercase tracking-widest">ITEMS IN (Total)</p><p id="dash-in" class="text-3xl font-bold">0</p></div>
                 <div class="glass-card p-6 text-rose-400"><p class="text-[10px] font-bold uppercase tracking-widest">ITEMS OUT (Total)</p><p id="dash-out" class="text-3xl font-bold">0</p></div>
+            </div>
+
+            <!-- ROW 2: Financial Analytics Grid -->
+            <div class="grid grid-cols-3 gap-6">
+                <div class="glass-card p-6 border-l-4 border-amber-500">
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-400">PENGELUARAN PRODUKSI (MODAL)</p>
+                    <p id="dash-capital" class="text-3xl font-extrabold text-white mt-1">Rp 0</p>
+                    <p class="text-[8px] text-zinc-600 font-bold uppercase mt-1">Akumulasi modal dari semua item masuk (In)</p>
+                </div>
+                <div class="glass-card p-6 border-l-4 border-blue-500">
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-400">LABA KOTOR (PENDAPATAN)</p>
+                    <p id="dash-gross" class="text-3xl font-extrabold text-white mt-1">Rp 0</p>
+                    <p class="text-[8px] text-zinc-600 font-bold uppercase mt-1">Akumulasi nilai penjualan dari item keluar (Out)</p>
+                </div>
+                <div class="glass-card p-6 border-l-4 border-emerald-500">
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-400 font-black">LABA BERSIH</p>
+                    <p id="dash-net" class="text-3xl font-extrabold text-emerald-400 mt-1">Rp 0</p>
+                    <p class="text-[8px] text-zinc-600 font-bold uppercase mt-1">Total selisih harga jual dan beli item keluar</p>
+                </div>
             </div>
             
             <div class="glass-card p-10 relative">
@@ -96,7 +117,8 @@
         <div id="tab-add-stock" class="tab-content hidden max-w-4xl mx-auto">
             <h2 class="text-3xl font-black italic mb-8 uppercase text-emerald-500">Add Stock Entry</h2>
             <div class="glass-card p-10 space-y-8">
-                <div class="grid grid-cols-2 gap-6">
+                <!-- Row 1: Date, Category, and PIC -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="space-y-2">
                         <label class="text-[10px] font-bold uppercase text-zinc-500 ml-2">Admission Date</label>
                         <input type="date" id="in-date" class="w-full p-4 rounded-xl">
@@ -110,14 +132,28 @@
                             <option value="Others">Others</option>
                         </select>
                     </div>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold uppercase text-zinc-500 ml-2">Nama Petugas (PIC)</label>
+                        <input type="text" id="in-operator" placeholder="Nama Anda..." class="w-full p-4 rounded-xl font-bold uppercase">
+                    </div>
                 </div>
 
                 <div class="space-y-2">
                     <label class="text-[10px] font-bold uppercase text-zinc-500 ml-2">Product Name</label>
                     <input type="text" id="in-name" placeholder="E.g. Ritus Classic Tees Black..." class="w-full p-4 rounded-xl text-lg font-bold">
                 </div>
+
+                <div class="grid grid-cols-2 gap-6 p-6 bg-white/[0.01] border border-white/5 rounded-2xl">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black uppercase text-amber-500 ml-2"><i class="fas fa-tools mr-1"></i> Harga Pembuatan (Modal)</label>
+                        <input type="number" id="in-price-capital" placeholder="Rp 0" class="w-full p-4 rounded-xl font-bold">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black uppercase text-emerald-500 ml-2"><i class="fas fa-tags mr-1"></i> Harga Penjualan (Jual)</label>
+                        <input type="number" id="in-price-selling" placeholder="Rp 0" class="w-full p-4 rounded-xl font-bold">
+                    </div>
+                </div>
                 
-                <!-- Apparel Specific UI -->
                 <div id="ui-apparel-wrapper" class="space-y-6">
                     <div class="flex gap-4">
                         <button onclick="setApparelType('standard')" id="btn-app-std" class="flex-1 py-3 bg-white text-black font-black rounded-xl uppercase text-[10px] border-2 border-white">Standard Sizes (S-XXL)</button>
@@ -140,12 +176,10 @@
                             <button onclick="addCustomVariantRow()" class="text-[9px] bg-white text-black px-4 py-2 rounded-lg font-black uppercase shadow-lg">+ Tambah Varian</button>
                         </div>
                         <div id="custom-variants-list" class="space-y-3">
-                            <!-- Custom inputs will appear here -->
                         </div>
                     </div>
                 </div>
 
-                <!-- Generic UI (Cans, Acc, Others) -->
                 <div id="ui-generic" class="hidden p-8 bg-white/[0.02] border border-white/5 rounded-2xl space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <div class="space-y-2">
@@ -218,12 +252,14 @@
                 <table class="w-full text-left">
                     <thead class="text-[10px] text-zinc-600 bg-white/[0.01]">
                         <tr>
-                            <th class="px-8 py-5 uppercase">Date</th>
-                            <th class="px-8 py-5 uppercase">Product Name</th>
-                            <th class="px-8 py-5 uppercase">Category</th>
-                            <th class="px-8 py-5 uppercase">Variant/Spec</th>
-                            <th class="px-8 py-5 uppercase text-center">Flow</th>
-                            <th class="px-8 py-5 text-right uppercase">Qty</th>
+                            <th class="px-6 py-5 uppercase">Date</th>
+                            <th class="px-6 py-5 uppercase">Product Name</th>
+                            <th class="px-6 py-5 uppercase">Category</th>
+                            <th class="px-6 py-5 uppercase">Variant/Spec</th>
+                            <th class="px-6 py-5 uppercase">Harga (Beli / Jual)</th>
+                            <th class="px-6 py-5 uppercase">PIC/Petugas</th>
+                            <th class="px-6 py-5 text-center uppercase">Flow</th>
+                            <th class="px-6 py-5 text-right uppercase">Qty</th>
                         </tr>
                     </thead>
                     <tbody id="history-body" class="text-xs"></tbody>
@@ -243,7 +279,7 @@
                 
                 <div class="pt-10 border-t border-white/5 space-y-4">
                     <h3 class="text-xs font-black uppercase tracking-widest italic text-amber-500">Bulk Import</h3>
-                    <p class="text-[10px] text-zinc-500 uppercase font-bold tracking-tighter leading-relaxed">Upload CSV file with specific header structure:<br><b>Date;Name;Info;Category;Type;Qty</b></p>
+                    <p class="text-[10px] text-zinc-500 uppercase font-bold tracking-tighter leading-relaxed">Upload CSV file with specific header structure:<br><b>Date;Name;Info;Category;Type;Qty;CapitalPrice;SellingPrice;Operator</b></p>
                     <input type="file" id="import-file" accept=".csv" class="hidden" onchange="handleImport(this)">
                     <button onclick="document.getElementById('import-file').click()" class="w-full py-5 bg-amber-500/10 text-amber-500 border border-amber-500/20 font-black rounded-2xl uppercase text-[10px] tracking-widest">Select File & Import</button>
                     <p class="text-[9px] text-zinc-600 italic">Info: Jika kategori CSV bukan Apparel, Accessories, atau Cans, otomatis dialihkan ke 'Others'.</p>
@@ -274,20 +310,27 @@
                     <p class="text-[10px] text-rose-500 font-bold uppercase text-center">Ketik "DELETE DATABASE" untuk mengotorisasi</p>
                     <input type="text" id="clean-verify" placeholder="Ketik DELETE DATABASE..." class="w-full p-5 rounded-2xl text-center border-rose-500/20 text-rose-500 uppercase font-black tracking-[0.2em]">
                     <div class="grid grid-cols-2 gap-4">
-<button onclick="cleanupData('range')" class="py-5 bg-rose-500/10 text-rose-500 border border-rose-500/30 rounded-2xl font-black uppercase text-[10px] hover:bg-rose-500 hover:text-white transition-all">Hapus Rentang Waktu</button>
-<button onclick="cleanupData('all')" class="py-5 bg-rose-600 text-white rounded-2xl font-black uppercase text-[10px] hover:bg-rose-700 transition-all">Hapus Keseluruhan Data</button>
+                        <button onclick="cleanupData('range')" class="py-5 bg-rose-500/10 text-rose-500 border border-rose-500/30 rounded-2xl font-black uppercase text-[10px] hover:bg-rose-500 hover:text-white transition-all">Hapus Rentang Waktu</button>
+                        <button onclick="cleanupData('all')" class="py-5 bg-rose-600 text-white rounded-2xl font-black uppercase text-[10px] hover:bg-rose-700 transition-all">Hapus Keseluruhan Data</button>
                     </div>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- CONFIRMATION MODAL (IN/OUT) -->
+    <!-- CONFIRMATION MODAL -->
     <div id="modal-confirm" class="fixed inset-0 z-[300] modal-overlay flex items-center justify-center p-6 hidden">
         <div class="glass-card w-full max-w-sm p-10 text-center space-y-6">
             <div id="confirm-icon" class="w-16 h-16 rounded-full mx-auto flex items-center justify-center text-2xl"></div>
             <h3 id="confirm-title" class="text-xl font-black italic uppercase">Otorisasi Transaksi</h3>
             <p id="confirm-desc" class="text-xs text-zinc-400 uppercase leading-relaxed font-bold"></p>
+            
+            <!-- Operator/Petugas Form Field -->
+            <div class="space-y-2 text-left">
+                <label class="text-[9px] font-black uppercase text-zinc-500 ml-2">Nama PIC / Petugas *</label>
+                <input type="text" id="confirm-operator" placeholder="Ketik nama Anda..." class="w-full p-4 rounded-xl bg-black border border-white/10 text-center text-xs font-bold uppercase tracking-wider outline-none text-white focus:border-white">
+            </div>
+
             <div class="grid grid-cols-2 gap-4 pt-4">
                 <button onclick="closeModal()" class="py-4 bg-zinc-900 rounded-xl font-bold uppercase text-[10px]">Batal</button>
                 <button id="confirm-btn-final" class="py-4 rounded-xl font-black uppercase text-[10px]"></button>
@@ -315,22 +358,21 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-        import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-    const firebaseConfig = {
-  apiKey: "AIzaSyB2xfDX5PU_nP5TEPSYFL6xmBcS0wZrj_c",
-  authDomain: "ritus-street-inventory.firebaseapp.com",
-  projectId: "ritus-street-inventory",
-  storageBucket: "ritus-street-inventory.firebasestorage.app",
-  messagingSenderId: "249697895281",
-  appId: "1:249697895281:web:c44bccdd16958c9d28ecd0",
-  measurementId: "G-MMTVPVB24E"
-};
+        const firebaseConfig = {
+            apiKey: "AIzaSyB2xfDX5PU_nP5TEPSYFL6xmBcS0wZrj_c",
+            authDomain: "ritus-street-inventory.firebaseapp.com",
+            projectId: "ritus-street-inventory",
+            storageBucket: "ritus-street-inventory.firebasestorage.app",
+            messagingSenderId: "249697895281",
+            appId: "1:249697895281:web:c44bccdd16958c9d28ecd0",
+            measurementId: "G-MMTVPVB24E"
+        };
+        
         const app = initializeApp(firebaseConfig);
-        console.log(firebaseConfig);
         console.log("Firebase initialized");
-        console.log("API KEY:", firebaseConfig.apiKey);
         const auth = getAuth(app);
         const db_fs = getFirestore(app);
         const appId = 'ritus-street-whm-v11';
@@ -341,57 +383,67 @@
         let currentChartType = 'doughnut';
         let currentChartFilter = 'ALL';
         const PASSWORDS = ["RITUSSTREET2026", "RITUSMAKASSAR", "RITUS202626"];
-    function formatDate(date = new Date()) {
-    const d = String(date.getDate()).padStart(2, '0');
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const y = date.getFullYear();
-    return `${d}/${m}/${y}`;
-}
+
+        function formatDate(date = new Date()) {
+            const d = String(date.getDate()).padStart(2, '0');
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const y = date.getFullYear();
+            return `${d}/${m}/${y}`;
+        }
+
         function formatDisplayDate(dateStr) {
-    if (!dateStr) return '-';
-    // jika sudah DD/MM/YYYY
-    if (dateStr.includes('/')) return dateStr;
-    const date = new Date(dateStr);
-    if (isNaN(date)) return dateStr;
-    const d = String(date.getDate()).padStart(2, '0');
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const y = date.getFullYear();
-    return `${d}/${m}/${y}`;
-}
+            if (!dateStr) return '-';
+            if (dateStr.includes('/')) return dateStr;
+            const date = new Date(dateStr);
+            if (isNaN(date)) return dateStr;
+            const d = String(date.getDate()).padStart(2, '0');
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const y = date.getFullYear();
+            return `${d}/${m}/${y}`;
+        }
+
+        function formatRupiah(num) {
+            if (num === undefined || num === null || isNaN(num)) return "Rp 0";
+            return "Rp " + Number(num).toLocaleString('id-ID');
+        }
+
+        // Fungsi pembersih mata uang Indonesia agar dapat dikonversi menjadi tipe Angka murni
+        function parseIndonesianCurrency(str) {
+            if (!str) return 0;
+            let cleaned = str.trim()
+                .replace(/Rp/gi, '')
+                .replace(/\s/g, '')
+                .replace(/\./g, '')
+                .replace(/,/g, '.');
+            
+            const parsed = parseFloat(cleaned);
+            return isNaN(parsed) ? 0 : parsed;
+        }
+
         // Auth Logic
-async function initAuth() {
-    try {
-        await signInAnonymously(auth);
-        console.log("AUTH USER:", auth.currentUser);
-        console.log("Anonymous login success");
-    } catch (error) {
-        console.error("Auth Failure:", error);
-    }
-}
+        async function initAuth() {
+            try {
+                await signInAnonymously(auth);
+                console.log("AUTH USER:", auth.currentUser);
+            } catch (error) {
+                console.error("Auth Failure:", error);
+            }
+        }
 
-window.checkAuth = async function() {
-
-    const val = document.getElementById('pass-input').value;
-
-    if (PASSWORDS.includes(val)) {
-
-        showToast("Login berhasil!");
-
-        await initAuth();
-
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('main-sidebar').classList.remove('hidden');
-        document.getElementById('main-content').classList.remove('hidden');
-
-    } else {
-
-        showToast("❌ Password Salah!", true);
-
-        document.getElementById('pass-input').value = "";
-
-        document.getElementById('pass-input').focus();
-    }
-};
+        window.checkAuth = async function() {
+            const val = document.getElementById('pass-input').value;
+            if (PASSWORDS.includes(val)) {
+                showToast("Login berhasil!");
+                await initAuth();
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-sidebar').classList.remove('hidden');
+                document.getElementById('main-content').classList.remove('hidden');
+            } else {
+                showToast("❌ Password Salah!", true);
+                document.getElementById('pass-input').value = "";
+                document.getElementById('pass-input').focus();
+            }
+        };
 
         // Real-time Data Sync
         onAuthStateChanged(auth, (user) => {
@@ -400,21 +452,19 @@ window.checkAuth = async function() {
             if (unsubscribeSnap) unsubscribeSnap();
             unsubscribeSnap = onSnapshot(colRef, (snapshot) => {
                 localDB = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            localDB.sort((a, b) => {
-    const parseDate = (str) => {
-        const parts = str.split('/');
-        if(parts.length !== 3) return new Date(str);
-        return new Date(
-            `${parts[2]}-${parts[1]}-${parts[0]}`
-        );
-    };
-    return parseDate(b.date) - parseDate(a.date);
-});
-            requestAnimationFrame(() => {
-                updateDashboard();
-                renderInventory();
-                renderHistory();
-            });
+                localDB.sort((a, b) => {
+                    const parseDate = (str) => {
+                        const parts = str.split('/');
+                        if(parts.length !== 3) return new Date(str);
+                        return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                    };
+                    return parseDate(b.date) - parseDate(a.date);
+                });
+                requestAnimationFrame(() => {
+                    updateDashboard();
+                    renderInventory();
+                    renderHistory();
+                });
             }, (error) => {
                 if(error.code === 'permission-denied') showToast("Sesi habis, harap refresh", true);
             });
@@ -456,6 +506,28 @@ window.checkAuth = async function() {
             document.getElementById('dash-in').innerText = localDB.filter(x => x.type === 'In').reduce((a,b)=>a+b.qty, 0);
             document.getElementById('dash-out').innerText = localDB.filter(x => x.type === 'Out').reduce((a,b)=>a+b.qty, 0);
             
+            // Perhitungan Finansial Dashboard
+            let totalCapital = 0; // Modal dari stok barang masuk (In)
+            let totalGross = 0;   // Pendapatan kotor dari barang keluar (Out)
+            let totalNet = 0;     // Laba bersih dari selisih jual-beli barang keluar (Out)
+
+            localDB.forEach(t => {
+                const qty = t.qty || 0;
+                const cap = t.capitalPrice || 0;
+                const sell = t.sellingPrice || 0;
+
+                if (t.type === 'In') {
+                    totalCapital += (qty * cap);
+                } else if (t.type === 'Out') {
+                    totalGross += (qty * sell);
+                    totalNet += (qty * (sell - cap));
+                }
+            });
+
+            document.getElementById('dash-capital').innerText = formatRupiah(totalCapital);
+            document.getElementById('dash-gross').innerText = formatRupiah(totalGross);
+            document.getElementById('dash-net').innerText = formatRupiah(totalNet);
+
             const categories = ["Apparel", "Accessories", "Cans", "Others"];
             const catData = categories.map(cat => {
                 const filtered = localDB.filter(x => x.category === cat);
@@ -490,28 +562,19 @@ window.checkAuth = async function() {
                         legend: { display: false },
                         tooltip: {
                             callbacks: {
-   label: function(context) {
-
-    let label = context.label || '';
-
-    if (label) label += ': ';
-
-    let val;
-
-    if (currentChartType === 'bar') {
-        val = context.parsed.y;
-    } else {
-        val = context.parsed;
-    }
-
-    let total = context.dataset.data.reduce((a, b) => a + b, 0);
-
-    let percentage = total > 0
-        ? Math.round((val * 100) / total)
-        : 0;
-
-    return `${label}${val} Units (${percentage}%)`;
-}
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) label += ': ';
+                                    let val;
+                                    if (currentChartType === 'bar') {
+                                        val = context.parsed.y;
+                                    } else {
+                                        val = context.parsed;
+                                    }
+                                    let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    let percentage = total > 0 ? Math.round((val * 100) / total) : 0;
+                                    return `${label}${val} Units (${percentage}%)`;
+                                }
                             }
                         }
                     },
@@ -553,17 +616,25 @@ window.checkAuth = async function() {
 
         window.saveNewProduct = async () => {
             if (!auth.currentUser) return showToast("Sesi tidak valid", true);
-            const date = document.getElementById('in-date').value;
+            const dateStr = document.getElementById('in-date').value;
             const cat = document.getElementById('in-cat').value;
             const name = document.getElementById('in-name').value;
-            if(!name || !date) return showToast("Lengkapi Nama & Tanggal!", true);
+            const operator = document.getElementById('in-operator').value.trim().toUpperCase() || 'ADMIN';
+            
+            const capitalPrice = parseFloat(document.getElementById('in-price-capital').value) || 0;
+            const sellingPrice = parseFloat(document.getElementById('in-price-selling').value) || 0;
+
+            if(!name || !dateStr) return showToast("Lengkapi Nama & Tanggal!", true);
+
+            const dateObj = new Date(dateStr);
+            const date = formatDate(dateObj);
 
             const batch = [];
             if(cat === 'Apparel') {
                 if (apparelType === 'standard') {
                     document.querySelectorAll('.variant-input').forEach(inp => {
                         const q = parseInt(inp.value);
-                        if(q > 0) batch.push({ date, name, info: inp.dataset.var, category: cat, type: 'In', qty: q });
+                        if(q > 0) batch.push({ date, name, info: inp.dataset.var, category: cat, type: 'In', qty: q, capitalPrice, sellingPrice, operator });
                     });
                 } else {
                     const names = document.querySelectorAll('.cst-var-name');
@@ -571,95 +642,47 @@ window.checkAuth = async function() {
                     names.forEach((nInput, i) => {
                         const vName = nInput.value.trim().toUpperCase();
                         const q = parseInt(qtys[i].value);
-                        if (vName && q > 0) batch.push({ date, name, info: vName, category: cat, type: 'In', qty: q });
+                        if (vName && q > 0) batch.push({ date, name, info: vName, category: cat, type: 'In', qty: q, capitalPrice, sellingPrice, operator });
                     });
                 }
             } else {
                 const q = parseInt(document.getElementById('gen-qty').value);
                 const info = document.getElementById('gen-info').value || 'Std';
-                if(q > 0) batch.push({ date, name, info, category: cat, type: 'In', qty: q });
+                if(q > 0) batch.push({ date, name, info, category: cat, type: 'In', qty: q, capitalPrice, sellingPrice, operator });
             }
 
             if(batch.length === 0) return showToast("Masukkan Jumlah Stok yang valid!", true);
             
+            if (isProcessing) return;
+            isProcessing = true;
+            const btns = document.querySelectorAll('button');
+            
             try {
+                btns.forEach(b => b.disabled = true);
                 const colRef = collection(db_fs, 'artifacts', appId, 'public', 'data', 'transactions');
- if (isProcessing) return;
 
-isProcessing = true;
+                for (const item of batch) {
+                    await addDoc(colRef, item);
+                }
 
-const btns = document.querySelectorAll('button');
-
-try {
-
-    btns.forEach(b => b.disabled = true);
-
-    const colRef = collection(
-        db_fs,
-        'artifacts',
-        appId,
-        'public',
-        'data',
-        'transactions'
-    );
-
-for (const item of batch) {
-
-    // SAVE INVENTORY
-    await addDoc(colRef, item);
-
-    // SAVE HISTORY LOG
-    await addDoc(
-        collection(
-            db_fs,
-            'artifacts',
-            appId,
-            'public',
-            'data',
-            'transactions'
-        ),
-        {
-            date: formatDate(),
-            name: item.name,
-            info: item.info || "-",
-            category: item.category,
-            type: 'In',
-            qty: item.qty
-        }
-    );
-}
-
-    showToast("Produk berhasil ditambahkan!");
-
-    // RESET FORM
-    document.getElementById('in-name').value = "";
-    document.querySelectorAll('.variant-input').forEach(i => i.value = "");
-    document.getElementById('custom-variants-list').innerHTML = "";
-    document.getElementById('gen-qty').value = "";
-    document.getElementById('gen-info').value = "";
-
-} catch(e) {
-
-    console.error(e);
-
-    showToast("Gagal menyimpan data", true);
-
-} finally {
-
-    isProcessing = false;
-
-    btns.forEach(b => b.disabled = false);
-}
                 showToast("Produk berhasil ditambahkan!");
-                
-                // Reset form
+
+                // RESET FORM
                 document.getElementById('in-name').value = "";
+                document.getElementById('in-price-capital').value = "";
+                document.getElementById('in-price-selling').value = "";
+                document.getElementById('in-operator').value = "";
                 document.querySelectorAll('.variant-input').forEach(i => i.value = "");
                 document.getElementById('custom-variants-list').innerHTML = "";
                 document.getElementById('gen-qty').value = "";
                 document.getElementById('gen-info').value = "";
-            } catch (e) {
+
+            } catch(e) {
+                console.error(e);
                 showToast("Gagal menyimpan data", true);
+            } finally {
+                isProcessing = false;
+                btns.forEach(b => b.disabled = false);
             }
         };
 
@@ -672,10 +695,20 @@ for (const item of batch) {
             const products = {};
             localDB.forEach(t => {
                 const key = `${t.name}|||${t.category}`;
-                if(!products[key]) products[key] = { variants: {}, total: 0 };
+                if(!products[key]) {
+                    products[key] = { 
+                        variants: {}, 
+                        total: 0,
+                        capitalPrice: t.capitalPrice || 0,
+                        sellingPrice: t.sellingPrice || 0
+                    };
+                }
                 const net = (t.type === 'In' ? t.qty : -t.qty);
                 products[key].variants[t.info] = (products[key].variants[t.info] || 0) + net;
                 products[key].total += net;
+                
+                if(t.capitalPrice !== undefined) products[key].capitalPrice = t.capitalPrice;
+                if(t.sellingPrice !== undefined) products[key].sellingPrice = t.sellingPrice;
             });
 
             let entries = Object.entries(products);
@@ -698,8 +731,8 @@ for (const item of batch) {
                             </div>
                             <div class="flex items-center gap-2">
                                 <input type="number" id="inp-${name.replace(/\s+/g,'')}-${vName.replace(/\s+/g,'')}" placeholder="0" class="w-12 p-2 text-center text-xs font-bold rounded bg-zinc-900 border-none outline-none">
-                                <button onclick="triggerMove('${name}','${vName}','${cat}','In')" class="w-8 h-8 rounded bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-black transition-all text-[10px]"><i class="fas fa-plus"></i></button>
-                                <button onclick="triggerMove('${name}','${vName}','${cat}','Out')" class="w-8 h-8 rounded bg-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white transition-all text-[10px]"><i class="fas fa-minus"></i></button>
+                                <button onclick="triggerMove('${name}','${vName}','${cat}','In', ${data.capitalPrice}, ${data.sellingPrice})" class="w-8 h-8 rounded bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-black transition-all text-[10px]"><i class="fas fa-plus"></i></button>
+                                <button onclick="triggerMove('${name}','${vName}','${cat}','Out', ${data.capitalPrice}, ${data.sellingPrice})" class="w-8 h-8 rounded bg-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white transition-all text-[10px]"><i class="fas fa-minus"></i></button>
                             </div>
                         </div>`;
                 });
@@ -711,16 +744,35 @@ for (const item of batch) {
                             <h3 class="text-[12px] font-black uppercase truncate">${name}</h3>
                             <span class="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">${cat}</span>
                         </div>
+                        
+                        <div class="grid grid-cols-2 gap-2 p-3 bg-white/[0.01] rounded-xl mb-4 border border-white/5 text-[10px]">
+                            <div>
+                                <span class="text-zinc-500 block text-[9px] uppercase font-bold">Pembuatan:</span>
+                                <span class="text-amber-500 font-extrabold">${formatRupiah(data.capitalPrice)}</span>
+                            </div>
+                            <div>
+                                <span class="text-zinc-500 block text-[9px] uppercase font-bold">Penjualan:</span>
+                                <span class="text-emerald-500 font-extrabold">${formatRupiah(data.sellingPrice)}</span>
+                            </div>
+                        </div>
+
                         <div class="flex-1 space-y-1 overflow-y-auto max-h-48 pr-1">${varHTML}</div>
-                        <div class="mt-4 pt-4 border-t border-white/5 flex justify-between items-center font-black">
-                            <span class="text-[9px] text-zinc-500 uppercase">Total Unit Item</span>
-                            <span class="text-sm">${data.total}</span>
+                        
+                        <div class="mt-4 pt-4 border-t border-white/5 space-y-1 font-black">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[9px] text-zinc-500 uppercase">Total Unit Item</span>
+                                <span class="text-sm text-white">${data.total}</span>
+                            </div>
+                            <div class="flex justify-between items-center text-[10px]">
+                                <span class="text-zinc-500 uppercase">Estimasi Nilai Jual</span>
+                                <span class="text-emerald-400">${formatRupiah(data.total * data.sellingPrice)}</span>
+                            </div>
                         </div>
                     </div>`;
             }).join('');
         };
 
-        window.triggerMove = (name, info, cat, type) => {
+        window.triggerMove = (name, info, cat, type, capitalPrice = 0, sellingPrice = 0) => {
             const elId = `inp-${name.replace(/\s+/g,'')}-${info.replace(/\s+/g,'')}`;
             const el = document.getElementById(elId);
             const val = parseInt(el.value);
@@ -731,6 +783,9 @@ for (const item of batch) {
                 if(val > stock) return showToast(`Stok ${info} kurang! Sisa: ${stock}`, true);
             }
 
+            // Reset input nama operator di modal konfirmasi
+            document.getElementById('confirm-operator').value = "";
+
             const modal = document.getElementById('modal-confirm');
             const icon = document.getElementById('confirm-icon');
             icon.className = `w-16 h-16 rounded-full mx-auto flex items-center justify-center text-2xl ${type === 'In' ? 'bg-emerald-500 text-black' : 'bg-rose-500 text-white'}`;
@@ -740,65 +795,51 @@ for (const item of batch) {
             const btn = document.getElementById('confirm-btn-final');
             btn.innerText = `KONFIRMASI ${type.toUpperCase()}`;
             btn.className = `py-4 rounded-xl font-black text-[10px] uppercase ${type === 'In' ? 'bg-emerald-500 text-black' : 'bg-rose-500 text-white'}`;
- btn.onclick = async () => {
+            
+            btn.onclick = async () => {
+                const opName = document.getElementById('confirm-operator').value.trim().toUpperCase();
+                if(!opName) {
+                    return showToast("Masukkan Nama Petugas / PIC!", true);
+                }
 
-    if (isProcessing) return;
+                if (isProcessing) return;
+                isProcessing = true;
+                btn.disabled = true;
+                btn.innerHTML = "PROCESSING...";
 
-    isProcessing = true;
+                try {
+                    if (!auth.currentUser) throw new Error("Auth invalid");
+                    closeModal();
 
-    btn.disabled = true;
+                    const colRef = collection(db_fs, 'artifacts', appId, 'public', 'data', 'transactions');
+                    const payload = {
+                        date: formatDate(),
+                        name,
+                        info,
+                        category: cat,
+                        type,
+                        qty: val,
+                        capitalPrice,
+                        sellingPrice,
+                        operator: opName
+                    };
+                    await new Promise(r => setTimeout(r, 300));
+                    await addDoc(colRef, payload);
 
-    btn.innerHTML = "PROCESSING...";
+                    showToast("Stok berhasil diupdate!");
+                    el.value = "";
 
-    try {
-
-        if (!auth.currentUser) {
-            throw new Error("Auth invalid");
-        }
-
-        closeModal();
-
-        const colRef = collection(
-            db_fs,
-            'artifacts',
-            appId,
-            'public',
-            'data',
-            'transactions'
-        );
-
-        const payload = {
-            date: formatDate(),
-            name,
-            info,
-            category: cat,
-            type,
-            qty: val
+                } catch(err) {
+                    console.error(err);
+                    showToast("Gagal update stok", true);
+                } finally {
+                    isProcessing = false;
+                    btn.disabled = false;
+                    btn.innerHTML = `KONFIRMASI ${type.toUpperCase()}`;
+                }
+            };
+            modal.classList.remove('hidden');
         };
-        await new Promise(r => setTimeout(r, 300));
-        await addDoc(colRef, payload);
-
-        showToast("Stok berhasil diupdate!");
-
-        el.value = "";
-
-    } catch(err) {
-
-        console.error(err);
-
-        showToast("Gagal update stok", true);
-
-    } finally {
-
-        isProcessing = false;
-
-        btn.disabled = false;
-
-        btn.innerHTML = `KONFIRMASI ${type.toUpperCase()}`;
-    }
-};
-                    modal.classList.remove('hidden');
-                };
 
         window.triggerDeleteSKU = (name, cat) => {
             const modal = document.getElementById('modal-delete-sku');
@@ -828,7 +869,7 @@ for (const item of batch) {
             const catF = document.getElementById('hist-filter-cat').value;
             
             let data = localDB.filter(x => {
-                const matchSearch = x.name.toLowerCase().includes(search) || (x.info && x.info.toLowerCase().includes(search));
+                const matchSearch = x.name.toLowerCase().includes(search) || (x.info && x.info.toLowerCase().includes(search)) || (x.operator && x.operator.toLowerCase().includes(search));
                 const matchType = typeF === 'ALL' || x.type === typeF;
                 const matchCat = catF === 'ALL' || x.category === catF;
                 return matchSearch && matchType && matchCat;
@@ -838,27 +879,32 @@ for (const item of batch) {
             if(!body) return;
             body.innerHTML = data.map(t => `
                 <tr class="border-b border-white/5 hover:bg-white/[0.01] transition-colors">
-                    <td class="px-8 py-4 opacity-40">${t.date}</td>
-                    <td class="px-8 py-4 font-bold uppercase text-white">${t.name}</td>
-                    <td class="px-8 py-4 text-[10px] font-bold text-zinc-500 uppercase">${t.category}</td>
-                    <td class="px-8 py-4 text-zinc-400 font-bold uppercase">${t.info}</td>
-                    <td class="px-8 py-4"><span class="px-2 py-1 rounded text-[8px] font-black uppercase ${t.type==='In'?'bg-emerald-500/10 text-emerald-500':'bg-rose-500/10 text-rose-500'}">${t.type}</span></td>
-                    <td class="px-8 py-4 text-right font-black ${t.type==='In'?'text-emerald-500':'text-rose-400'}">${t.type==='In'?'+':'-'}${t.qty}</td>
+                    <td class="px-6 py-4 opacity-40">${t.date}</td>
+                    <td class="px-6 py-4 font-bold uppercase text-white">${t.name}</td>
+                    <td class="px-6 py-4 text-[10px] font-bold text-zinc-500 uppercase">${t.category}</td>
+                    <td class="px-6 py-4 text-zinc-400 font-bold uppercase">${t.info}</td>
+                    <td class="px-6 py-4 text-zinc-400">
+                        <div class="text-[10px]">M: <span class="text-amber-500 font-bold">${formatRupiah(t.capitalPrice)}</span></div>
+                        <div class="text-[10px]">J: <span class="text-emerald-500 font-bold">${formatRupiah(t.sellingPrice)}</span></div>
+                    </td>
+                    <td class="px-6 py-4 font-extrabold uppercase text-zinc-300 text-[10px] tracking-wider">${t.operator || '-'}</td>
+                    <td class="px-6 py-4 text-center"><span class="px-2 py-1 rounded text-[8px] font-black uppercase ${t.type==='In'?'bg-emerald-500/10 text-emerald-500':'bg-rose-500/10 text-rose-500'}">${t.type}</span></td>
+                    <td class="px-6 py-4 text-right font-black ${t.type==='In'?'text-emerald-500':'text-rose-400'}">${t.type==='In'?'+':'-'}${t.qty}</td>
                 </tr>`).join('');
         };
 
         // --- CSV IMPORT / EXPORT ---
         window.exportCSV = () => {
-    let csv = "Date;Name;Info;Category;Type;Qty\n";
-    localDB.forEach(t => {
-        csv += `${formatDisplayDate(t.date)};${t.name};${t.info};${t.category};${t.type};${t.qty}\n`;
-    });
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const a = document.createElement('a');
-    a.href = window.URL.createObjectURL(blob);
-    a.download = `RITUS_DATA_${formatDate()}.csv`;
-    a.click();
-};
+            let csv = "Date;Name;Info;Category;Type;Qty;CapitalPrice;SellingPrice;Operator\n";
+            localDB.forEach(t => {
+                csv += `${formatDisplayDate(t.date)};${t.name};${t.info};${t.category};${t.type};${t.qty};${t.capitalPrice || 0};${t.sellingPrice || 0};${t.operator || '-'}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = window.URL.createObjectURL(blob);
+            a.download = `RITUS_DATA_${formatDate()}.csv`;
+            a.click();
+        };
 
         window.handleImport = async (input) => {
             const file = input.files[0];
@@ -870,7 +916,7 @@ for (const item of batch) {
                 const colRef = collection(db_fs, 'artifacts', appId, 'public', 'data', 'transactions');
                 let count = 0;
                 
-                for (let i=1; i<lines.length; i++) {
+                for (let i = 1; i < lines.length; i++) {
                     const line = lines[i].trim();
                     if(!line) continue;
                     const parts = line.split(';');
@@ -878,11 +924,14 @@ for (const item of batch) {
                     
                     let cat = parts[3].trim();
                     const catLower = cat.toLowerCase();
-                    // AUTO CATEGORIZE
                     if (catLower.includes('acc')) { cat = 'Accessories'; }
                     else if (catLower === 'apparel') { cat = 'Apparel'; }
                     else if (catLower === 'cans') { cat = 'Cans'; }
                     else { cat = 'Others'; }
+
+                    const capitalPrice = parts[6] ? parseIndonesianCurrency(parts[6]) : 0;
+                    const sellingPrice = parts[7] ? parseIndonesianCurrency(parts[7]) : 0;
+                    const operator = parts[8] ? parts[8].trim().toUpperCase() : 'SYSTEM_IMPORT';
 
                     await addDoc(colRef, { 
                         date: parts[0].trim(), 
@@ -890,114 +939,86 @@ for (const item of batch) {
                         info: parts[2].trim(), 
                         category: cat, 
                         type: parts[4].trim(), 
-                        qty: parseInt(parts[5].trim()) 
+                        qty: parseInt(parts[5].trim()),
+                        capitalPrice,
+                        sellingPrice,
+                        operator
                     });
                     count++;
                 }
-                showToast(`Import Success: ${count} Logs added`, false);
+                showToast(`Import Berhasil: ${count} Logs ditambahkan`, false);
                 input.value = "";
             };
             reader.readAsText(file);
         };
+
         // --- CLEANUP ---
-// --- CLEANUP ---
+        window.cleanupData = (mode) => {
+            window.cleanupMode = mode;
+            confirmCleanup();
+        };
 
-    window.cleanupData = (mode) => {
-    window.cleanupMode = mode;
-    confirmCleanup();
-    switchTab('cleanup');
+        window.confirmCleanup = async () => {
+            const verifyText = document.getElementById('clean-verify').value;
 
-};
+            if (verifyText !== 'DELETE DATABASE') {
+                return showToast("Ketik DELETE DATABASE untuk verifikasi!", true);
+            }
 
-window.confirmCleanup = async () => {
+            const from = document.getElementById('clean-from').value;
+            const to = document.getElementById('clean-to').value;
+            let toPurge = [];
 
-    const verifyText =
-        document.getElementById('clean-verify').value;
+            if (window.cleanupMode === 'all') {
+                toPurge = [...localDB];
+            } else if (window.cleanupMode === 'range') {
+                if (!from || !to) {
+                    return showToast("Pilih kedua rentang tanggal!", true);
+                }
 
-    if (verifyText.trim().toUpperCase() !== 'DELETE DATABASE') {
+                const fromDateObj = new Date(from);
+                const toDateObj = new Date(to);
 
-        return showToast(
-            "Ketik DELETE DATABASE untuk verifikasi!",
-            true
-        );
-    }
+                fromDateObj.setHours(0, 0, 0, 0);
+                toDateObj.setHours(23, 59, 59, 999);
 
-const from =
-    document.getElementById('clean-from').value;
-const to =
-    document.getElementById('clean-to').value;
+                toPurge = localDB.filter(x => {
+                    const parts = x.date.split('/');
+                    if (parts.length !== 3) return false;
+                    const transDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                    transDate.setHours(12, 0, 0, 0);
+                    return transDate >= fromDateObj && transDate <= toDateObj;
+                });
+            }
 
-console.log("VERIFY:", verifyText);
-console.log("MODE:", window.cleanupMode);
-console.log("LOCALDB:", localDB.length);
+            if (toPurge.length === 0) {
+                return showToast("Tidak ada data ditemukan di rentang tersebut.", true);
+            }
+            if (!auth.currentUser) {
+                return showToast("Sesi Auth tidak valid", true);
+            }
 
-if(localDB.length === 0) {
+            if (isProcessing) return;
+            isProcessing = true;
+            showToast("Sedang membersihkan data...");
 
-    return showToast(
-        "Database kosong / belum termuat",
-        true
-    );
-}
-    let toPurge = [];
+            try {
+                for (const item of toPurge) {
+                    await deleteDoc(doc(db_fs, 'artifacts', appId, 'public', 'data', 'transactions', item.id));
+                }
+                showToast(`${toPurge.length} logs berhasil dihapus`);
+                document.getElementById('clean-verify').value = "";
+                document.getElementById('clean-from').value = "";
+                document.getElementById('clean-to').value = "";
+                switchTab('inventory');
+            } catch (err) {
+                console.error(err);
+                showToast("Gagal melakukan pembersihan data", true);
+            } finally {
+                isProcessing = false;
+            }
+        };
 
-    if (window.cleanupMode === 'all') {
-
-        toPurge = [...localDB];
-
-    } else if (from && to) {
-
-        toPurge = localDB.filter(x => {
-
-            const parts = x.date.split('/');
-            if (parts.length !== 3) return false;
-            const formatted =
-                `${parts[2]}-${parts[1]}-${parts[0]}`;
-            return formatted >= from &&
-                   formatted <= to;
-        });
-
-    } else {
-
-        return showToast(
-            "Pilih kedua rentang tanggal!",
-            true
-        );
-    }
-    if (toPurge.length === 0) {
-        return showToast(
-            "Tidak ada data ditemukan.",
-            true
-        );
-    }
-    if (!auth.currentUser) {
-        return showToast(
-            "Auth tidak valid",
-            true
-        );
-    }
-
-    showToast("Sedang membersihkan data...");
-
-    for (const item of toPurge) {
-
-        await deleteDoc(
-            doc(
-                db_fs,
-                'artifacts',
-                appId,
-                'public',
-                'data',
-                'transactions',
-                item.id
-            )
-        );
-    }
-    showToast(
-        `${toPurge.length} logs berhasil dihapus`
-    );
-    document.getElementById('clean-verify').value = "";
-    switchTab('inventory');
-};
         // UTILS
         window.closeModal = () => document.getElementById('modal-confirm').classList.add('hidden');
         window.closeDeleteModal = () => document.getElementById('modal-delete-sku').classList.add('hidden');
@@ -1009,11 +1030,12 @@ if(localDB.length === 0) {
             t.className = `fixed bottom-10 right-10 z-[400] px-10 py-6 font-black rounded-2xl text-[11px] uppercase tracking-widest shadow-2xl transition-all duration-300 italic ${err?'bg-rose-600 text-white':'bg-white text-black'} show`;
             setTimeout(()=>t.classList.remove('show'), 3000);
         }
+
         document.getElementById('pass-input').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        checkAuth();
-    }
-});
+            if (e.key === 'Enter') {
+                checkAuth();
+            }
+        });
     </script>
 </body>
 </html>
