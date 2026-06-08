@@ -318,22 +318,53 @@
         </div>
     </main>
 
-    <!-- CONFIRMATION MODAL -->
-    <div id="modal-confirm" class="fixed inset-0 z-[300] modal-overlay flex items-center justify-center p-6 hidden">
-        <div class="glass-card w-full max-w-sm p-10 text-center space-y-6">
-            <div id="confirm-icon" class="w-16 h-16 rounded-full mx-auto flex items-center justify-center text-2xl"></div>
-            <h3 id="confirm-title" class="text-xl font-black italic uppercase">Otorisasi Transaksi</h3>
-            <p id="confirm-desc" class="text-xs text-zinc-400 uppercase leading-relaxed font-bold"></p>
+    <!-- FLOATING CART BUTTON -->
+    <div id="cart-floating-btn" class="fixed bottom-10 right-10 z-[250] hidden">
+        <button onclick="toggleCartModal(true)" class="flex items-center gap-3 px-6 py-4 bg-white text-black font-black rounded-2xl shadow-2xl hover:bg-zinc-200 transition-all border border-black/10">
+            <i class="fas fa-shopping-cart text-lg text-emerald-500"></i>
+            <span class="text-[10px] uppercase tracking-wider font-extrabold">Antrean Transaksi</span>
+            <span id="cart-count" class="bg-rose-600 text-white text-[10px] w-6 h-6 rounded-full flex items-center justify-center font-bold">0</span>
+        </button>
+    </div>
+
+    <!-- BULK TRANSACTION MODAL -->
+    <div id="modal-cart" class="fixed inset-0 z-[350] modal-overlay flex items-center justify-center p-6 hidden">
+        <div class="glass-card w-full max-w-2xl p-8 flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-center pb-4 border-b border-white/5">
+                <h3 class="text-xl font-black italic uppercase text-white flex items-center gap-2">
+                    <i class="fas fa-boxes text-emerald-500"></i> Antrean Transaksi Massal
+                </h3>
+                <button onclick="toggleCartModal(false)" class="text-zinc-400 hover:text-white"><i class="fas fa-times text-lg"></i></button>
+            </div>
             
-            <!-- Operator/Petugas Form Field -->
-            <div class="space-y-2 text-left">
-                <label class="text-[9px] font-black uppercase text-zinc-500 ml-2">Nama PIC / Petugas *</label>
-                <input type="text" id="confirm-operator" placeholder="Ketik nama Anda..." class="w-full p-4 rounded-xl bg-black border border-white/10 text-center text-xs font-bold uppercase tracking-wider outline-none text-white focus:border-white">
+            <!-- Cart list (scrollable) -->
+            <div id="cart-items-list" class="flex-1 overflow-y-auto my-6 space-y-3 pr-2">
+                <!-- Dynamically generated elements -->
             </div>
 
-            <div class="grid grid-cols-2 gap-4 pt-4">
-                <button onclick="closeModal()" class="py-4 bg-zinc-900 rounded-xl font-bold uppercase text-[10px]">Batal</button>
-                <button id="confirm-btn-final" class="py-4 rounded-xl font-black uppercase text-[10px]"></button>
+            <!-- Summary & Form -->
+            <div class="pt-4 border-t border-white/5 space-y-6">
+                <div class="grid grid-cols-2 gap-4 text-xs font-bold uppercase">
+                    <div class="bg-white/[0.02] p-4 rounded-xl border border-white/5">
+                        <span class="text-zinc-500 block mb-1">Total Unit Masuk (IN)</span>
+                        <span id="cart-total-in" class="text-emerald-400 text-lg font-black">0 Units</span>
+                    </div>
+                    <div class="bg-white/[0.02] p-4 rounded-xl border border-white/5">
+                        <span class="text-zinc-500 block mb-1">Total Unit Keluar (OUT)</span>
+                        <span id="cart-total-out" class="text-rose-400 text-lg font-black">0 Units</span>
+                    </div>
+                </div>
+
+                <!-- Operator name input (Mandatory) -->
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-zinc-400 ml-2">Nama PIC / Petugas Penanggung Jawab *</label>
+                    <input type="text" id="cart-operator" placeholder="Ketik nama lengkap Anda..." class="w-full p-4 rounded-xl bg-zinc-950 border border-white/10 text-xs font-bold uppercase tracking-wider text-white focus:border-white outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="clearCart()" class="py-4 bg-zinc-900 text-zinc-400 rounded-xl font-bold uppercase text-[10px] hover:bg-zinc-800 hover:text-white transition-all">Kosongkan Antrean</button>
+                    <button id="cart-submit-btn" onclick="processBulkTransactions()" class="py-4 bg-emerald-500 text-black rounded-xl font-black uppercase text-[10px] hover:brightness-110 transition-all">Otorisasi & Proses Semua</button>
+                </div>
             </div>
         </div>
     </div>
@@ -352,6 +383,35 @@
         </div>
     </div>
 
+    <!-- EDIT SKU PRICE MODAL -->
+    <div id="modal-edit-price" class="fixed inset-0 z-[300] modal-overlay flex items-center justify-center p-6 hidden">
+        <div class="glass-card w-full max-w-sm p-10 text-center space-y-6">
+            <i class="fas fa-tags text-amber-500 text-3xl"></i>
+            <h3 class="text-xl font-black italic uppercase">Ubah Harga SKU</h3>
+            <p id="edit-price-desc" class="text-xs text-zinc-400 leading-relaxed font-bold"></p>
+            
+            <div class="space-y-4 text-left">
+                <div class="space-y-2">
+                    <label class="text-[9px] font-black uppercase text-zinc-500 ml-2">Harga Pembuatan (Modal)</label>
+                    <input type="number" id="edit-price-capital" placeholder="Rp 0" class="w-full p-4 rounded-xl bg-black border border-white/10 text-center text-xs font-bold text-white outline-none focus:border-white">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[9px] font-black uppercase text-zinc-500 ml-2">Harga Penjualan (Jual)</label>
+                    <input type="number" id="edit-price-selling" placeholder="Rp 0" class="w-full p-4 rounded-xl bg-black border border-white/10 text-center text-xs font-bold text-white outline-none focus:border-white">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[9px] font-black uppercase text-zinc-400 ml-2">Nama Petugas Penanggung Jawab *</label>
+                    <input type="text" id="edit-price-operator" placeholder="Ketik nama lengkap Anda..." class="w-full p-4 rounded-xl bg-black border border-white/10 text-center text-xs font-bold uppercase text-white outline-none focus:border-white">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 pt-4">
+                <button onclick="closeEditPriceModal()" class="py-4 bg-zinc-900 rounded-xl font-bold uppercase text-[10px]">Batal</button>
+                <button id="edit-price-btn-final" class="py-4 bg-amber-500 text-black rounded-xl font-black uppercase text-[10px] hover:brightness-110 transition-all">Simpan Perubahan</button>
+            </div>
+        </div>
+    </div>
+
     <!-- TOAST -->
     <div id="toast" class="fixed bottom-10 right-10 z-[400] px-10 py-6 font-black rounded-2xl text-[11px] uppercase tracking-widest shadow-2xl transition-all duration-300 translate-y-20 opacity-0 pointer-events-none italic"></div>
 
@@ -359,7 +419,7 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
         import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-        import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+        import { getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyB2xfDX5PU_nP5TEPSYFL6xmBcS0wZrj_c",
@@ -382,6 +442,7 @@
         let apparelType = 'standard';
         let currentChartType = 'doughnut';
         let currentChartFilter = 'ALL';
+        let transactionCart = []; // Variabel penampung keranjang transaksi massal
         const PASSWORDS = ["RITUSSTREET2026", "RITUSMAKASSAR", "RITUS202626"];
 
         function formatDate(date = new Date()) {
@@ -418,6 +479,13 @@
             
             const parsed = parseFloat(cleaned);
             return isNaN(parsed) ? 0 : parsed;
+        }
+
+        // Fungsi pembersih mata uang Indonesia agar dapat dikonversi menjadi tipe Angka murni atau default ke 'SYSTEM_IMPORT' jika data kosong
+        function parseIndonesianOperator(str) {
+            if (!str) return 'SYSTEM_IMPORT';
+            const cleaned = str.trim().toUpperCase();
+            return cleaned === '' ? 'SYSTEM_IMPORT' : cleaned;
         }
 
         // Auth Logic
@@ -686,6 +754,250 @@
             }
         };
 
+        // --- ANTRIAN TRANSAKSI MASSAL (CART LOGIC) ---
+        function updateCartUI() {
+            const countEl = document.getElementById('cart-count');
+            const btnEl = document.getElementById('cart-floating-btn');
+            
+            if (countEl) countEl.innerText = transactionCart.length;
+            
+            if (transactionCart.length > 0) {
+                btnEl.classList.remove('hidden');
+            } else {
+                btnEl.classList.add('hidden');
+            }
+        }
+
+        window.toggleCartModal = (show) => {
+            const modal = document.getElementById('modal-cart');
+            if (show) {
+                renderCartItems();
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        };
+
+        function calculateCartTotals() {
+            let totalIn = 0;
+            let totalOut = 0;
+            let totalRevOut = 0;
+
+            transactionCart.forEach((item, idx) => {
+                if (item.type === 'In') {
+                    totalIn += item.qty;
+                } else if (item.type === 'Out') {
+                    totalOut += item.qty;
+                    totalRevOut += (item.qty * item.sellingPrice);
+
+                    const subtotalEl = document.getElementById(`subtotal-${idx}`);
+                    if (subtotalEl) {
+                        subtotalEl.innerText = `Est. Jual: ${formatRupiah(item.qty * item.sellingPrice)}`;
+                    }
+                }
+            });
+
+            document.getElementById('cart-total-in').innerText = `${totalIn} Units`;
+            document.getElementById('cart-total-out').innerText = `${totalOut} Units (${formatRupiah(totalRevOut)})`;
+        }
+
+        window.updateCartItemPrice = (idx, newPrice) => {
+            const price = parseFloat(newPrice) || 0;
+            transactionCart[idx].sellingPrice = price;
+            calculateCartTotals();
+        };
+
+        function renderCartItems() {
+            const listContainer = document.getElementById('cart-items-list');
+            if (!listContainer) return;
+            
+            if (transactionCart.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center py-10 text-zinc-500 font-bold uppercase text-xs tracking-wider">
+                        <i class="fas fa-shopping-cart text-3xl mb-3 block"></i>
+                        Antrean Transaksi Kosong
+                    </div>`;
+                document.getElementById('cart-total-in').innerText = "0 Units";
+                document.getElementById('cart-total-out').innerText = "0 Units";
+                return;
+            }
+
+            listContainer.innerHTML = transactionCart.map((item, idx) => {
+                const isOut = item.type === 'Out';
+                const flowBadge = isOut 
+                    ? '<span class="px-2 py-1 bg-rose-500/15 text-rose-400 border border-rose-500/20 text-[9px] font-black rounded uppercase">OUT</span>'
+                    : '<span class="px-2 py-1 bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 text-[9px] font-black rounded uppercase">IN</span>';
+                
+                const priceControlHTML = isOut 
+                    ? `<div class="mt-3 p-3 bg-black/40 rounded-xl border border-white/5 space-y-2">
+                        <div class="flex items-center justify-between text-[9px] text-zinc-500 font-bold uppercase">
+                            <span>Harga Jual Standar: ${formatRupiah(item.originalSellingPrice)}</span>
+                            <span class="text-rose-400">Tentukan Harga Jual Baru:</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] text-zinc-400 font-bold">Rp</span>
+                            <input type="number" value="${item.sellingPrice}" oninput="updateCartItemPrice(${idx}, this.value)" class="w-full p-2 text-xs rounded bg-zinc-900 border border-white/10 text-white font-extrabold focus:border-rose-500 outline-none">
+                        </div>
+                       </div>`
+                    : '';
+
+                const subtotalText = isOut 
+                    ? `Est. Jual: ${formatRupiah(item.qty * item.sellingPrice)}`
+                    : `Est. Modal: ${formatRupiah(item.qty * item.capitalPrice)}`;
+
+                return `
+                    <div class="flex flex-col p-5 bg-white/[0.02] border border-white/5 rounded-2xl gap-3">
+                        <div class="flex items-center justify-between">
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2">
+                                    ${flowBadge}
+                                    <span class="text-xs font-black uppercase text-white">${item.name}</span>
+                                </div>
+                                <div class="text-[9px] text-zinc-500 font-bold uppercase">
+                                    Varian: <span class="text-zinc-300 font-extrabold">${item.info}</span> | Kategori: ${item.category}
+                                </div>
+                                <div id="subtotal-${idx}" class="text-[9px] text-zinc-400 font-extrabold uppercase">
+                                    ${subtotalText}
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="text-xs font-black text-white block">${item.qty} Pcs</span>
+                                <button onclick="removeFromCart(${idx})" class="w-8 h-8 rounded-lg bg-rose-500/15 text-rose-500 hover:bg-rose-500 hover:text-white transition-all text-xs flex items-center justify-center">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                        ${priceControlHTML}
+                    </div>`;
+            }).join('');
+
+            calculateCartTotals();
+        }
+
+        window.removeFromCart = (idx) => {
+            const removed = transactionCart.splice(idx, 1)[0];
+            showToast(`Dihapus: ${removed.name} (${removed.info})`);
+            renderCartItems();
+            updateCartUI();
+            if (transactionCart.length === 0) {
+                toggleCartModal(false);
+            }
+        };
+
+        window.clearCart = () => {
+            transactionCart = [];
+            updateCartUI();
+            toggleCartModal(false);
+            showToast("Antrean transaksi telah dikosongkan");
+        };
+
+        window.processBulkTransactions = async () => {
+            const opName = document.getElementById('cart-operator').value.trim().toUpperCase();
+            if (!opName) {
+                return showToast("Masukkan Nama Petugas / PIC!", true);
+            }
+
+            if (isProcessing) return;
+            isProcessing = true;
+            
+            const submitBtn = document.getElementById('cart-submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> PROCESSING...';
+
+            try {
+                if (!auth.currentUser) throw new Error("Autentikasi Invalid");
+                
+                const colRef = collection(db_fs, 'artifacts', appId, 'public', 'data', 'transactions');
+
+                for (const item of transactionCart) {
+                    const payload = {
+                        date: formatDate(),
+                        name: item.name,
+                        info: item.info,
+                        category: item.category,
+                        type: item.type,
+                        qty: item.qty,
+                        capitalPrice: item.capitalPrice,
+                        sellingPrice: item.sellingPrice,
+                        operator: opName
+                    };
+                    await addDoc(colRef, payload);
+                }
+
+                showToast(`Sukses memproses ${transactionCart.length} transaksi massal!`);
+                
+                transactionCart = [];
+                document.getElementById('cart-operator').value = "";
+                
+                updateCartUI();
+                toggleCartModal(false);
+                switchTab('history');
+
+            } catch (err) {
+                console.error(err);
+                showToast("Gagal memproses transaksi massal", true);
+            } finally {
+                isProcessing = false;
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Otorisasi & Proses Semua";
+            }
+        };
+
+        // --- EDIT SKU PRICE LOGIC ---
+        window.triggerEditPrice = (name, cat, currentCapital, currentSelling) => {
+            const modal = document.getElementById('modal-edit-price');
+            document.getElementById('edit-price-desc').innerText = `Ubah harga default untuk produk "${name}" (${cat}). Perubahan harga akan diterapkan secara massal ke seluruh histori transaksi SKU ini.`;
+            document.getElementById('edit-price-capital').value = currentCapital;
+            document.getElementById('edit-price-selling').value = currentSelling;
+            document.getElementById('edit-price-operator').value = "";
+            
+            const btn = document.getElementById('edit-price-btn-final');
+            btn.onclick = async () => {
+                const newCapital = parseFloat(document.getElementById('edit-price-capital').value) || 0;
+                const newSelling = parseFloat(document.getElementById('edit-price-selling').value) || 0;
+                const operator = document.getElementById('edit-price-operator').value.trim().toUpperCase();
+                
+                if (!operator) {
+                    return showToast("Masukkan Nama Petugas / PIC!", true);
+                }
+                
+                if (isProcessing) return;
+                isProcessing = true;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> MEMPROSES...';
+                
+                try {
+                    if (!auth.currentUser) throw new Error("Autentikasi Invalid");
+                    
+                    // Filter semua dokumen transaksi yang cocok dengan nama & kategori SKU ini
+                    const toUpdate = localDB.filter(x => x.name === name && x.category === cat);
+                    
+                    // Proses update harga ke database satu per satu
+                    for (const item of toUpdate) {
+                        const docRef = doc(db_fs, 'artifacts', appId, 'public', 'data', 'transactions', item.id);
+                        await updateDoc(docRef, {
+                            capitalPrice: newCapital,
+                            sellingPrice: newSelling,
+                            operator: operator // PIC terakhir yang memodifikasi harga
+                        });
+                    }
+                    
+                    closeEditPriceModal();
+                    showToast("Harga SKU berhasil diperbarui secara massal!");
+                } catch (err) {
+                    console.error(err);
+                    showToast("Gagal memperbarui harga SKU", true);
+                } finally {
+                    isProcessing = false;
+                    btn.disabled = false;
+                    btn.innerText = "Simpan Perubahan";
+                }
+            };
+            modal.classList.remove('hidden');
+        };
+
+        window.closeEditPriceModal = () => document.getElementById('modal-edit-price').classList.add('hidden');
+
         // --- INVENTORY LOGIC ---
         window.renderInventory = () => {
             const search = document.getElementById('inv-search').value.toLowerCase();
@@ -699,16 +1011,17 @@
                     products[key] = { 
                         variants: {}, 
                         total: 0,
-                        capitalPrice: t.capitalPrice || 0,
-                        sellingPrice: t.sellingPrice || 0
+                        capitalPrice: 0,
+                        sellingPrice: 0
                     };
                 }
                 const net = (t.type === 'In' ? t.qty : -t.qty);
                 products[key].variants[t.info] = (products[key].variants[t.info] || 0) + net;
                 products[key].total += net;
                 
-                if(t.capitalPrice !== undefined) products[key].capitalPrice = t.capitalPrice;
-                if(t.sellingPrice !== undefined) products[key].sellingPrice = t.sellingPrice;
+                // Set harga dari transaksi pertama yang valid (paling baru karena array terurut descending)
+                if (products[key].capitalPrice === 0 && t.capitalPrice !== undefined) products[key].capitalPrice = t.capitalPrice;
+                if (products[key].sellingPrice === 0 && t.sellingPrice !== undefined) products[key].sellingPrice = t.sellingPrice;
             });
 
             let entries = Object.entries(products);
@@ -731,16 +1044,27 @@
                             </div>
                             <div class="flex items-center gap-2">
                                 <input type="number" id="inp-${name.replace(/\s+/g,'')}-${vName.replace(/\s+/g,'')}" placeholder="0" class="w-12 p-2 text-center text-xs font-bold rounded bg-zinc-900 border-none outline-none">
-                                <button onclick="triggerMove('${name}','${vName}','${cat}','In', ${data.capitalPrice}, ${data.sellingPrice})" class="w-8 h-8 rounded bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-black transition-all text-[10px]"><i class="fas fa-plus"></i></button>
-                                <button onclick="triggerMove('${name}','${vName}','${cat}','Out', ${data.capitalPrice}, ${data.sellingPrice})" class="w-8 h-8 rounded bg-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white transition-all text-[10px]"><i class="fas fa-minus"></i></button>
+                                <button onclick="triggerMove('${name}','${vName}','${cat}','In', ${data.capitalPrice}, ${data.sellingPrice})" class="w-8 h-8 rounded bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-black transition-all text-[10px] flex items-center justify-center"><i class="fas fa-plus"></i></button>
+                                <button onclick="triggerMove('${name}','${vName}','${cat}','Out', ${data.capitalPrice}, ${data.sellingPrice})" class="w-8 h-8 rounded bg-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white transition-all text-[10px] flex items-center justify-center"><i class="fas fa-minus"></i></button>
                             </div>
                         </div>`;
                 });
 
                 return `
                     <div class="sku-card glass-card p-6 flex flex-col h-full relative group">
-                        <button onclick="triggerDeleteSKU('${name}','${cat}')" class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 text-rose-500 hover:text-rose-400 text-xs transition-all p-2"><i class="fas fa-trash-alt"></i></button>
-                        <div class="mb-4 pr-6">
+                        <!-- BUTTONS: TOP RIGHT -->
+                        <div class="absolute top-4 right-4 flex items-center gap-1">
+                            <!-- Tombol 3 Titik Edit Harga (Baru) -->
+                            <button onclick="triggerEditPrice('${name}','${cat}', ${data.capitalPrice}, ${data.sellingPrice})" class="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-white text-xs transition-all p-2" title="Edit Harga SKU">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <!-- Tombol Hapus SKU -->
+                            <button onclick="triggerDeleteSKU('${name}','${cat}')" class="opacity-0 group-hover:opacity-100 text-rose-500 hover:text-rose-400 text-xs transition-all p-2" title="Hapus SKU">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+
+                        <div class="mb-4 pr-16">
                             <h3 class="text-[12px] font-black uppercase truncate">${name}</h3>
                             <span class="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">${cat}</span>
                         </div>
@@ -778,67 +1102,36 @@
             const val = parseInt(el.value);
             if(!val || val <= 0) return showToast("Masukkan jumlah yang benar!", true);
 
+            const alreadyInCartOut = transactionCart
+                .filter(x => x.name === name && x.info === info && x.type === 'Out')
+                .reduce((a, c) => a + c.qty, 0);
+
             if(type === 'Out') {
                 const stock = localDB.filter(x => x.name === name && x.info === info).reduce((a,c)=>a+(c.type==='In'?c.qty:-c.qty),0);
-                if(val > stock) return showToast(`Stok ${info} kurang! Sisa: ${stock}`, true);
+                if((val + alreadyInCartOut) > stock) {
+                    return showToast(`Stok ${info} kurang! Sisa: ${stock} pcs (Sudah ada di antrean out: ${alreadyInCartOut} pcs)`, true);
+                }
             }
 
-            // Reset input nama operator di modal konfirmasi
-            document.getElementById('confirm-operator').value = "";
+            const existingIndex = transactionCart.findIndex(x => x.name === name && x.info === info && x.type === type);
+            if (existingIndex > -1) {
+                transactionCart[existingIndex].qty += val;
+            } else {
+                transactionCart.push({
+                    name, 
+                    info, 
+                    category: cat, 
+                    type, 
+                    qty: val, 
+                    capitalPrice, 
+                    sellingPrice,
+                    originalSellingPrice: sellingPrice
+                });
+            }
 
-            const modal = document.getElementById('modal-confirm');
-            const icon = document.getElementById('confirm-icon');
-            icon.className = `w-16 h-16 rounded-full mx-auto flex items-center justify-center text-2xl ${type === 'In' ? 'bg-emerald-500 text-black' : 'bg-rose-500 text-white'}`;
-            icon.innerHTML = `<i class="fas fa-${type==='In'?'plus':'minus'}"></i>`;
-            document.getElementById('confirm-desc').innerText = `Konfirmasi ${type === 'In' ? 'penambahan' : 'pengurangan'} ${val} unit untuk ${name} (${info})?`;
-            
-            const btn = document.getElementById('confirm-btn-final');
-            btn.innerText = `KONFIRMASI ${type.toUpperCase()}`;
-            btn.className = `py-4 rounded-xl font-black text-[10px] uppercase ${type === 'In' ? 'bg-emerald-500 text-black' : 'bg-rose-500 text-white'}`;
-            
-            btn.onclick = async () => {
-                const opName = document.getElementById('confirm-operator').value.trim().toUpperCase();
-                if(!opName) {
-                    return showToast("Masukkan Nama Petugas / PIC!", true);
-                }
-
-                if (isProcessing) return;
-                isProcessing = true;
-                btn.disabled = true;
-                btn.innerHTML = "PROCESSING...";
-
-                try {
-                    if (!auth.currentUser) throw new Error("Auth invalid");
-                    closeModal();
-
-                    const colRef = collection(db_fs, 'artifacts', appId, 'public', 'data', 'transactions');
-                    const payload = {
-                        date: formatDate(),
-                        name,
-                        info,
-                        category: cat,
-                        type,
-                        qty: val,
-                        capitalPrice,
-                        sellingPrice,
-                        operator: opName
-                    };
-                    await new Promise(r => setTimeout(r, 300));
-                    await addDoc(colRef, payload);
-
-                    showToast("Stok berhasil diupdate!");
-                    el.value = "";
-
-                } catch(err) {
-                    console.error(err);
-                    showToast("Gagal update stok", true);
-                } finally {
-                    isProcessing = false;
-                    btn.disabled = false;
-                    btn.innerHTML = `KONFIRMASI ${type.toUpperCase()}`;
-                }
-            };
-            modal.classList.remove('hidden');
+            el.value = "";
+            updateCartUI();
+            showToast(`🛒 Ditambahkan ke antrean: ${name} (${info}) [${type}] x${val}`);
         };
 
         window.triggerDeleteSKU = (name, cat) => {
@@ -931,7 +1224,8 @@
 
                     const capitalPrice = parts[6] ? parseIndonesianCurrency(parts[6]) : 0;
                     const sellingPrice = parts[7] ? parseIndonesianCurrency(parts[7]) : 0;
-                    const operator = parts[8] ? parts[8].trim().toUpperCase() : 'SYSTEM_IMPORT';
+                    
+                    const operator = parts[8] ? parseIndonesianOperator(parts[8]) : 'SYSTEM_IMPORT';
 
                     await addDoc(colRef, { 
                         date: parts[0].trim(), 
@@ -1027,7 +1321,7 @@
             const t = document.getElementById('toast');
             if(!t) return;
             t.innerText = m;
-            t.className = `fixed bottom-10 right-10 z-[400] px-10 py-6 font-black rounded-2xl text-[11px] uppercase tracking-widest shadow-2xl transition-all duration-300 italic ${err?'bg-rose-600 text-white':'bg-white text-black'} show`;
+            t.className = `fixed bottom-10 right-10 z-[400] px-10 py-6 font-black rounded-2xl text-[11px] uppercase tracking-widest shadow-2xl transition-all duration-300 translate-y-20 opacity-0 pointer-events-none italic ${err?'bg-rose-600 text-white':'bg-white text-black'} show`;
             setTimeout(()=>t.classList.remove('show'), 3000);
         }
 
